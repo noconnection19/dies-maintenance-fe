@@ -6,6 +6,7 @@ import '../../features/auth/data/auth_service.dart';
 import '../../features/dashboard/screens/home_screen.dart';
 import '../../features/dashboard/screens/maintenance_dashboard_screen.dart';
 import '../../features/line_stop/screens/line_stop_screen.dart';
+import '../../features/report_dashboard/screens/line_stop_monitoring_dashboard_screen.dart';
 
 /// Nama-nama route yang digunakan di seluruh aplikasi.
 class AppRoutes {
@@ -16,6 +17,7 @@ class AppRoutes {
   static const String dashboard = '/dashboard';
   static const String lineStop  = '/line-stop';
   static const String maintenanceDashboard = '/maintenance-dashboard';
+  static const String reportDashboard = '/report-dashboard';
 }
 
 /// Router aplikasi: mengelola navigasi dan auth guard.
@@ -41,6 +43,11 @@ class AppRouter {
           if (user == null) return const LandingScreen();
           return const MaintenanceDashboardScreen();
         },
+        AppRoutes.reportDashboard: (context) {
+          final user = SessionStore.instance.currentUser;
+          if (user == null) return const LandingScreen();
+          return const LineStopMonitoringDashboardScreen();
+        },
       };
 
   /// Route awal saat app dibuka.
@@ -62,6 +69,13 @@ class AppRouter {
   static void goToDashboard(BuildContext context) {
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.dashboard,
+      (_) => false,
+    );
+  }
+
+  static void goToReportDashboard(BuildContext context) {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      AppRoutes.reportDashboard,
       (_) => false,
     );
   }

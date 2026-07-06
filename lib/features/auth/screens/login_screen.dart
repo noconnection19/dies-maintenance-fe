@@ -56,7 +56,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Navigasi dilakukan di luar try-catch
     if (success && mounted) {
-      AppRouter.goToDashboard(context);
+      if (_moduleName == 'Dies Maintenance Report') {
+        AppRouter.goToReportDashboard(context);
+      } else {
+        AppRouter.goToDashboard(context);
+      }
     }
   }
 
