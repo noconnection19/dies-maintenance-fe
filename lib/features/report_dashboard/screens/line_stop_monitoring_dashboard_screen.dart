@@ -23,6 +23,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
 
           // Main Content Area (Chart + Cards)
           Expanded(
+            flex: 5,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -39,6 +40,13 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Bottom Area (3 equal cards)
+          Expanded(
+            flex: 3,
+            child: _buildBottomCards(),
           ),
         ],
       ),
@@ -400,6 +408,19 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
           const Spacer(),
         ],
       ),
+    );
+  }
+
+  Widget _buildBottomCards() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: _buildLargeDetailCard('Breakdown Problem per Categories')),
+        const SizedBox(width: 24),
+        Expanded(child: _buildLargeDetailCard('Trend Occurence per LINE')),
+        const SizedBox(width: 24),
+        Expanded(child: _buildLargeDetailCard('Improvement PPM per Dies - Top 5')),
+      ],
     );
   }
 }
