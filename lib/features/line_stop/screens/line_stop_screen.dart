@@ -2,41 +2,10 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/widgets/app_shell.dart';
+import '../../../core/widgets/app_loading.dart';
+import '../../dashboard/data/line_stop_service.dart';
 import '../widgets/add_dies_dialog.dart';
-
-// ─── Dummy Model ───────────────────────────────────────────────────
-class _LineStopItem {
-  final String dateTime;
-  final String partNumber;
-  final String model;
-  final String shift;
-  final String line;
-  final String machine;
-  final int pic;
-  final String status; // ON_PROGRESS | COMPLETED
-
-  const _LineStopItem({
-    required this.dateTime,
-    required this.partNumber,
-    required this.model,
-    required this.shift,
-    required this.line,
-    required this.machine,
-    required this.pic,
-    required this.status,
-  });
-}
-
-const _dummyData = [
-  _LineStopItem(dateTime: '7 May 2025, 13:02', partNumber: '47781.2-0K090', model: '660A', shift: 'Red',  line: 'TR-01', machine: 'TR1', pic: 2, status: 'ON_PROGRESS'),
-  _LineStopItem(dateTime: '7 May 2025, 13:02', partNumber: '47781.2-0K241', model: '650A', shift: 'Red',  line: 'TR-01', machine: 'TD',  pic: 3, status: 'ON_PROGRESS'),
-  _LineStopItem(dateTime: '7 May 2025, 13:02', partNumber: '48733-0K010',   model: '699N', shift: 'Blue', line: 'TR-01', machine: 'TR2', pic: 2, status: 'ON_PROGRESS'),
-  _LineStopItem(dateTime: '7 May 2025, 13:02', partNumber: '51161.2-KK010', model: '660A', shift: 'Blue', line: 'TR-01', machine: 'TD',  pic: 1, status: 'ON_PROGRESS'),
-  _LineStopItem(dateTime: '6 May 2025, 09:15', partNumber: '47781.2-0K090', model: '660A', shift: 'Red',  line: 'TR-02', machine: 'TR1', pic: 2, status: 'ON_PROGRESS'),
-  _LineStopItem(dateTime: '5 May 2025, 08:00', partNumber: '52301-0K070',   model: '650A', shift: 'Blue', line: 'TR-03', machine: 'TD',  pic: 1, status: 'COMPLETED'),
-  _LineStopItem(dateTime: '5 May 2025, 10:30', partNumber: '55410-0K010',   model: '699N', shift: 'Red',  line: 'TR-01', machine: 'TR2', pic: 3, status: 'COMPLETED'),
-  _LineStopItem(dateTime: '4 May 2025, 14:00', partNumber: '65900-0K010',   model: '660A', shift: 'Blue', line: 'TR-02', machine: 'TR1', pic: 2, status: 'COMPLETED'),
-];
+import 'line_stop_detail_screen.dart';
 
 // ─── Screen ────────────────────────────────────────────────────────
 class LineStopScreen extends StatefulWidget {
@@ -50,8 +19,18 @@ class _LineStopScreenState extends State<LineStopScreen> {
   int _tabIndex = 0; // 0 = On Progress, 1 = Completed
   String _sortValue = 'Latest';
   final _searchCtrl = TextEditingController();
+  
+  List<DiesTask> _tasks = [];
+  int _totalTasks = 0;
+  bool _isLoading = false;
   int _currentPage = 1;
   static const _perPage = 10;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
 
   @override
   void dispose() {
@@ -59,17 +38,57 @@ class _LineStopScreenState extends State<LineStopScreen> {
     super.dispose();
   }
 
-  List<_LineStopItem> get _filtered {
-    final status = _tabIndex == 0 ? 'ON_PROGRESS' : 'COMPLETED';
+  Future<void> _loadTasks() async {
+    setState(() => _isLoading = true);
+    try {
+      final status = _tabIndex == 0 ? 'ON_PROGRESS' : 'COMPLETED';
+      final res = await LineStopService.getPaginated(
+        page: _currentPage,
+        size: _perPage,
+        status: status,
+      );
+      setState(() {
+        _tasks = res['items'] as List<DiesTask>;
+        _totalTasks = res['total'] as int;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load line stop: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  List<DiesTask> get _filtered {
     final query = _searchCtrl.text.toLowerCase();
-    return _dummyData
-        .where((e) => e.status == status)
-        .where((e) =>
-            query.isEmpty ||
-            e.partNumber.toLowerCase().contains(query) ||
-            e.line.toLowerCase().contains(query) ||
-            e.machine.toLowerCase().contains(query))
-        .toList();
+    
+    // 1. Filter local
+    var list = _tasks.where((e) {
+      if (query.isEmpty) return true;
+      final part = (e.partNo ?? '').toLowerCase();
+      final line = (e.lineCd ?? '').toLowerCase();
+      final machine = (e.machineCd ?? '').toLowerCase();
+      return part.contains(query) || line.contains(query) || machine.contains(query);
+    }).toList();
+
+    // 2. Sort local
+    if (_sortValue == 'Latest') {
+      list.sort((a, b) => (b.repairedDt ?? b.createdDt ?? '').compareTo(a.repairedDt ?? a.createdDt ?? ''));
+    } else if (_sortValue == 'Oldest') {
+      list.sort((a, b) => (a.repairedDt ?? a.createdDt ?? '').compareTo(b.repairedDt ?? b.createdDt ?? ''));
+    } else if (_sortValue == 'Part No') {
+      list.sort((a, b) => (a.partNo ?? '').compareTo(b.partNo ?? ''));
+    }
+
+    return list;
+  }
+
+  void _changePage(int page) {
+    setState(() {
+      _currentPage = page;
+    });
+    _loadTasks();
   }
 
   @override
@@ -115,10 +134,14 @@ class _LineStopScreenState extends State<LineStopScreen> {
                   // ── Tabs ────────────────────────────────────────
                   _TabBar(
                     selectedIndex: _tabIndex,
-                    onChanged: (i) => setState(() {
-                      _tabIndex = i;
-                      _currentPage = 1;
-                    }),
+                    onChanged: (i) {
+                      setState(() {
+                        _tabIndex = i;
+                        _currentPage = 1;
+                        _tasks = [];
+                      });
+                      _loadTasks();
+                    },
                   ),
 
                   // ── Toolbar ─────────────────────────────────────
@@ -128,11 +151,25 @@ class _LineStopScreenState extends State<LineStopScreen> {
                       children: [
                         // Add button
                         ElevatedButton.icon(
-                          onPressed: () {
-                            showDialog(
+                          onPressed: () async {
+                            final result = await showDialog<dynamic>(
                               context: context,
                               builder: (_) => const AddDiesDialog(),
                             );
+                            if (result is DiesTask) {
+                              _currentPage = 1;
+                              _loadTasks();
+                              if (mounted) {
+                                final didUpdate = await Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => LineStopDetailScreen(task: result),
+                                  ),
+                                );
+                                if (didUpdate == true) {
+                                  _loadTasks();
+                                }
+                              }
+                            }
                           },
                           icon: const Icon(Icons.add, size: AppSizes.iconMd),
                           label: const Text(
@@ -210,30 +247,43 @@ class _LineStopScreenState extends State<LineStopScreen> {
                           borderRadius: BorderRadius.circular(AppSizes.radiusLg),
                         ),
                         clipBehavior: Clip.antiAlias, // Potong pinggiran agar rounded
-                        child: _filtered.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'Tidak ada data.',
-                                  style: TextStyle(color: AppColors.textSecondary),
-                                ),
-                              )
-                            : _DataTable(items: _filtered),
+                        child: _isLoading
+                            ? const Center(child: AppLoading())
+                            : _filtered.isEmpty
+                                ? const Center(
+                                    child: Text(
+                                      'Tidak ada data.',
+                                      style: TextStyle(color: AppColors.textSecondary),
+                                    ),
+                                  )
+                                : _DataTable(
+                                    items: _filtered,
+                                    onDetailTap: (item) async {
+                                      final didUpdate = await Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => LineStopDetailScreen(task: item),
+                                        ),
+                                      );
+                                      if (didUpdate == true) {
+                                        _loadTasks();
+                                      }
+                                    },
+                                  ),
                       ),
                     ),
                   ),
 
                   // ── Pagination ──────────────────────────────────
                   _PaginationBar(
-                    total: _filtered.length,
+                    total: _totalTasks,
                     perPage: _perPage,
                     currentPage: _currentPage,
                     onPrev: _currentPage > 1
-                        ? () => setState(() => _currentPage--)
+                        ? () => _changePage(_currentPage - 1)
                         : null,
-                    onNext:
-                        _currentPage < (_filtered.length / _perPage).ceil()
-                            ? () => setState(() => _currentPage++)
-                            : null,
+                    onNext: _currentPage < (_totalTasks / _perPage).ceil()
+                        ? () => _changePage(_currentPage + 1)
+                        : null,
                   ),
                 ],
               ),
@@ -346,8 +396,9 @@ class _SortDropdown extends StatelessWidget {
 
 // ─── Data Table ────────────────────────────────────────────────────
 class _DataTable extends StatelessWidget {
-  final List<_LineStopItem> items;
-  const _DataTable({required this.items});
+  final List<DiesTask> items;
+  final ValueChanged<DiesTask> onDetailTap;
+  const _DataTable({required this.items, required this.onDetailTap});
 
   static const _headers = [
     'Date Time', 'Part Number', 'Model', 'Shift', 'Line', 'Machine', 'PIC', 'Action'
@@ -382,43 +433,47 @@ class _DataTable extends StatelessWidget {
                   dataRowMaxHeight: 52,
                   horizontalMargin: 20,
                   columnSpacing: 32,
-                headingTextStyle: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: AppColors.textPrimary,
+                  headingTextStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppColors.textPrimary,
+                  ),
+                  columns: _headers
+                      .map((h) => DataColumn(label: Text(h)))
+                      .toList(),
+                  rows: items.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final item = entry.value;
+
+                    // Tampilkan tanggal perbaikan atau pembuatan
+                    final dateTimeStr = item.repairedDt ?? item.createdDt ?? '-';
+                    
+                    return DataRow(
+                      color: WidgetStateProperty.resolveWith<Color?>((states) {
+                        // Zebra styling: selang-seling antara putih dan sedikit abu-abu
+                        return index.isEven ? Colors.white : const Color(0xFFF9FAFB); 
+                      }),
+                      cells: [
+                        DataCell(Text(dateTimeStr, style: _cellStyle)),
+                        DataCell(Text(item.partNo ?? '-', style: _cellStyle)),
+                        DataCell(Text(item.model ?? '-', style: _cellStyle)),
+                        DataCell(_ShiftBadge(shift: item.shift ?? '-')),
+                        DataCell(Text(item.lineCd ?? '-', style: _cellStyle)),
+                        DataCell(Text(item.machineCd ?? '-', style: _cellStyle)),
+                        DataCell(Text(item.repairedBy ?? '-', style: _cellStyle)),
+                        DataCell(_DetailButton(onTap: () {
+                          onDetailTap(item);
+                        })),
+                      ],
+                    );
+                  }).toList(),
                 ),
-                columns: _headers
-                    .map((h) => DataColumn(label: Text(h)))
-                    .toList(),
-                rows: items.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final item = entry.value;
-                  return DataRow(
-                    color: WidgetStateProperty.resolveWith<Color?>((states) {
-                      // Zebra styling: selang-seling antara putih dan sedikit abu-abu (mirip row teratas)
-                      return index.isEven ? Colors.white : const Color(0xFFF9FAFB); 
-                    }),
-                    cells: [
-                      DataCell(Text(item.dateTime, style: _cellStyle)),
-                      DataCell(Text(item.partNumber, style: _cellStyle)),
-                      DataCell(Text(item.model, style: _cellStyle)),
-                      DataCell(_ShiftBadge(shift: item.shift)),
-                      DataCell(Text(item.line, style: _cellStyle)),
-                      DataCell(Text(item.machine, style: _cellStyle)),
-                      DataCell(Text(item.pic.toString(), style: _cellStyle)),
-                      DataCell(_DetailButton(onTap: () {
-                        // TODO: navigate to detail
-                      })),
-                    ],
-                  );
-                }).toList(),
               ),
-            ), // Tutup Theme
-          ), // Tutup SingleChildScrollView child
-        ), // Tutup ConstrainedBox
-      ); // Tutup SingleChildScrollView horizontal
-    }, // Tutup Builder
-  ); // Tutup LayoutBuilder
+            ),
+          ),
+        );
+      },
+    );
   }
 
   static const _cellStyle = TextStyle(fontSize: 13, color: AppColors.textPrimary);
@@ -430,7 +485,8 @@ class _ShiftBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isRed = shift == 'Red';
+    final isRed = shift == 'R' || shift == 'Red';
+    final label = shift == 'R' ? 'Red' : (shift == 'B' ? 'Blue' : shift);
     final color = isRed ? AppColors.lineStop : const Color(0xFF3B82F6);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -439,7 +495,7 @@ class _ShiftBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSizes.radiusFull),
       ),
       child: Text(
-        shift,
+        label,
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
@@ -490,7 +546,7 @@ class _PaginationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final start = ((currentPage - 1) * perPage) + 1;
+    final start = total == 0 ? 0 : ((currentPage - 1) * perPage) + 1;
     final end = (currentPage * perPage).clamp(0, total);
 
     return Container(

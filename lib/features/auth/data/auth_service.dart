@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/session/session_store.dart';
@@ -30,6 +32,26 @@ class AuthUser {
       token: token,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'full_name': fullName,
+      'role': role,
+      'token': token,
+    };
+  }
+
+  factory AuthUser.fromStoredJson(Map<String, dynamic> json) {
+    return AuthUser(
+      id: json['id'] as int,
+      username: json['username'] as String,
+      fullName: json['full_name'] as String,
+      role: json['role'] as String,
+      token: json['token'] as String,
+    );
+  }
 }
 
 // ─── Service ───────────────────────────────────────────────────────
@@ -58,6 +80,10 @@ class AuthService {
     // Simpan ke SessionStore agar ApiClient bisa pakai token
     SessionStore.instance.setSession(user);
 
+    // Simpan ke SharedPreferences untuk persistensi reload page
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_session', jsonEncode(user.toJson()));
+
     return user;
   }
 
@@ -68,6 +94,10 @@ class AuthService {
     } catch (_) {
       // Abaikan error agar client tetap ter-logout meskipun server tidak aktif/token kadaluarsa
     } finally {
+      // Bersihkan SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user_session');
+
       SessionStore.instance.clearSession();
     }
   }
