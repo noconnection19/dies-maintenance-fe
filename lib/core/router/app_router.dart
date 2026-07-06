@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../session/session_store.dart';
 import '../../features/landing/screens/landing_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
+import '../../features/auth/data/auth_service.dart';
 import '../../features/dashboard/screens/home_screen.dart';
+import '../../features/dashboard/screens/maintenance_dashboard_screen.dart';
 import '../../features/line_stop/screens/line_stop_screen.dart';
 
 /// Nama-nama route yang digunakan di seluruh aplikasi.
@@ -13,6 +15,7 @@ class AppRoutes {
   static const String login     = '/login';
   static const String dashboard = '/dashboard';
   static const String lineStop  = '/line-stop';
+  static const String maintenanceDashboard = '/maintenance-dashboard';
 }
 
 /// Router aplikasi: mengelola navigasi dan auth guard.
@@ -32,6 +35,11 @@ class AppRouter {
           final user = SessionStore.instance.currentUser;
           if (user == null) return const LandingScreen();
           return const LineStopScreen();
+        },
+        AppRoutes.maintenanceDashboard: (context) {
+          final user = SessionStore.instance.currentUser;
+          if (user == null) return const LandingScreen();
+          return const MaintenanceDashboardScreen();
         },
       };
 
@@ -63,9 +71,14 @@ class AppRouter {
     Navigator.of(context).pushNamed(AppRoutes.lineStop);
   }
 
+  /// Navigasi ke Maintenance Dashboard Screen.
+  static void goToMaintenanceDashboard(BuildContext context) {
+    Navigator.of(context).pushNamed(AppRoutes.maintenanceDashboard);
+  }
+
   /// Logout: bersihkan sesi lalu kembali ke Landing.
   static void logout(BuildContext context) {
-    SessionStore.instance.clearSession();
+    AuthService.logout(); // Panggil API backend & bersihkan SessionStore
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.landing,
       (_) => false,

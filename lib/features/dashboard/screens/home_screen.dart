@@ -82,17 +82,24 @@ class _GridMenu extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        const Row(
+        Row(
           children: [
-            Expanded(
+            const Expanded(
               child: MaintenanceCard(
                 title: 'Dies Preventive',
                 taskCount: 0,
                 accentColor: AppColors.preventive,
               ),
             ),
-            SizedBox(width: 24),
-            Expanded(child: SizedBox()),
+            const SizedBox(width: 24),
+            Expanded(
+              child: MaintenanceCard(
+                title: 'Maintenance Dashboard',
+                taskCount: 0,
+                accentColor: Colors.blueAccent,
+                onTap: () => AppRouter.goToMaintenanceDashboard(context),
+              ),
+            ),
           ],
         ),
       ],

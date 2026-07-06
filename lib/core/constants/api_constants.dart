@@ -6,7 +6,9 @@ class ApiConstants {
 
   // ── Endpoint paths ──────────────────────────────────────────────
   static const String authLogin      = '/auth/login';
+  static const String authLogout     = '/auth/logout';
   static const String lineStop       = '/line-stop';
   static const String repair         = '/repair';
   static const String preventive     = '/preventive';
+  static const String dashboardMonitoring = '/dashboard/monitoring';
 }

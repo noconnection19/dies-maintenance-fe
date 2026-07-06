@@ -1,3 +1,5 @@
+import '../../../core/network/api_client.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/session/session_store.dart';
 
 // ─── Model ─────────────────────────────────────────────────────────
@@ -32,31 +34,26 @@ class AuthUser {
 
 // ─── Service ───────────────────────────────────────────────────────
 
-/// Service autentikasi — satu-satunya service yang TIDAK menggunakan [ApiClient]
-/// karena belum ada token saat login.
-///
-/// Setelah login berhasil, token disimpan ke [SessionStore] sehingga
-/// [ApiClient] dapat menggunakannya secara otomatis di semua request berikutnya.
+/// Service autentikasi — menggunakan [ApiClient] untuk menghubungi backend.
 class AuthService {
   AuthService._();
 
-  /// [MOCK] Login tanpa hit API — loloskan semua credential yang tidak kosong.
-  /// Ganti dengan implementasi asli saat backend sudah siap.
+  /// Login ke backend dengan memverifikasi credential.
   static Future<AuthUser> login(String username, String password) async {
-    // Simulasi network delay
-    await Future.delayed(const Duration(milliseconds: 600));
-
     if (username.isEmpty || password.isEmpty) {
-      throw Exception('Username / Password salah');
+      throw Exception('Username atau password tidak boleh kosong');
     }
 
-    final user = AuthUser(
-      id: 1,
-      username: username,
-      fullName: username,
-      role: 'Member',
-      token: 'mock-token-${DateTime.now().millisecondsSinceEpoch}',
-    );
+    final Map<String, dynamic> data = await ApiClient.post(
+      ApiConstants.authLogin,
+      body: {
+        'username': username,
+        'password': password,
+      },
+    ) as Map<String, dynamic>;
+
+    final token = data['access_token'] as String;
+    final user = AuthUser.fromJson(data, token);
 
     // Simpan ke SessionStore agar ApiClient bisa pakai token
     SessionStore.instance.setSession(user);
@@ -64,6 +61,15 @@ class AuthService {
     return user;
   }
 
-  /// Logout: hapus sesi dari [SessionStore].
-  static void logout() => SessionStore.instance.clearSession();
+  /// Logout: bersihkan sesi di server dan di local client.
+  static Future<void> logout() async {
+    try {
+      await ApiClient.post(ApiConstants.authLogout);
+    } catch (_) {
+      // Abaikan error agar client tetap ter-logout meskipun server tidak aktif/token kadaluarsa
+    } finally {
+      SessionStore.instance.clearSession();
+    }
+  }
 }
+
