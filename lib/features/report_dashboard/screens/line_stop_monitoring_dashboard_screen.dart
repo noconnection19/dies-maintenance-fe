@@ -15,15 +15,15 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
         children: [
           // Header Row
           _buildHeader(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
 
           // Stat Cards
           _buildStatCards(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
 
           // Main Content Area (Chart + Cards)
           Expanded(
-            flex: 5,
+            flex: 1,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -41,11 +41,11 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
           
           // Bottom Area (3 equal cards)
           Expanded(
-            flex: 3,
+            flex: 1,
             child: _buildBottomCards(),
           ),
         ],
@@ -60,7 +60,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
         const Text(
           'Dashboard Line Stop Monitoring',
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
           ),
@@ -80,7 +80,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
 
   Widget _buildFilterButton(String label, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -113,22 +113,25 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildStatCards() {
-    return Row(
-      children: [
-        Expanded(child: _buildSingleStatCard('PPM vs Target\nCurrent Month', '2000/2700', 'PPM')),
-        const SizedBox(width: 16),
-        Expanded(child: _buildSingleStatCard('AVG PPM', '2350', 'PPM')),
-        const SizedBox(width: 16),
-        Expanded(child: _buildSingleStatCard('Incident Line Stop\nCurrent Month', '15', 'Incidents')),
-        const SizedBox(width: 16),
-        Expanded(child: _buildSingleStatCard('Worst Line\nCurrent month', 'Line A', '')),
-      ],
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: _buildSingleStatCard('PPM vs Target\nCurrent Month', '2000/2700', 'PPM')),
+          const SizedBox(width: 16),
+          Expanded(child: _buildSingleStatCard('AVG PPM', '2350', 'PPM')),
+          const SizedBox(width: 16),
+          Expanded(child: _buildSingleStatCard('Incident Line Stop\nCurrent Month', '15', 'Incidents')),
+          const SizedBox(width: 16),
+          Expanded(child: _buildSingleStatCard('Worst Line\nCurrent month', 'Line A', '')),
+        ],
+      ),
     );
   }
 
   Widget _buildSingleStatCard(String title, String value, String unit) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -148,7 +151,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
           Text(
             title,
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 12,
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
               height: 1.3,
@@ -161,7 +164,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
               Text(
                 value,
                 style: const TextStyle(
-                  fontSize: 28,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppColors.green,
                   height: 1,
@@ -174,7 +177,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
                   child: Text(
                     unit,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: AppColors.textMuted,
                       fontWeight: FontWeight.w500,
                     ),
@@ -190,7 +193,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
 
   Widget _buildChartCard() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -207,7 +210,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Line Stop Frequency Overview',
+            'PPM Monthly Monitoring',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -315,66 +318,25 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: _buildSmallDetailCard('PPM Tandem', '1450')),
+              Expanded(child: _buildSmallDetailCard('PPM Tandem', '1450 | 8 Jam', '2% vs Last Month')),
               const SizedBox(width: 16),
-              Expanded(child: _buildSmallDetailCard('PPM Blanking', '900')),
+              Expanded(child: _buildSmallDetailCard('PPM Blanking', '900 | 8 Jam', '1.5% vs Last Month')),
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         // Bottom large card inside the 1/3 panel
         Expanded(
           flex: 1,
-          child: _buildLargeDetailCard('Detailed Breakdown'),
+          child: _buildTransverCard(),
         ),
       ],
     );
   }
 
-  Widget _buildSmallDetailCard(String title, String value) {
+  Widget _buildSmallDetailCard(String title, String value, String comparison) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLargeDetailCard(String title) {
-    return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -394,6 +356,70 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
             title,
             style: const TextStyle(
               fontSize: 16,
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.arrow_upward, color: Colors.red, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      comparison,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLargeDetailCard(String title) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
             ),
@@ -406,6 +432,70 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
             ),
           ),
           const Spacer(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransverCard() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'PPM Transver 1 - 3',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  '778 | 8 Jam',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.arrow_upward, color: Colors.red, size: 14),
+                    SizedBox(width: 4),
+                    Text(
+                      '2% vs Last Month',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
