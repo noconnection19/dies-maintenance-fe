@@ -1,0 +1,516 @@
+import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/app_shell.dart';
+
+class LineStopMonitoringDashboardScreen extends StatelessWidget {
+  const LineStopMonitoringDashboardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppShell(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header Row
+          _buildHeader(),
+          const SizedBox(height: 12),
+
+          // Stat Cards
+          _buildStatCards(),
+          const SizedBox(height: 12),
+
+          // Main Content Area (Chart + Cards)
+          Expanded(
+            flex: 1,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Left Column (2/3 width)
+                Expanded(
+                  flex: 2,
+                  child: _buildChartCard(),
+                ),
+                const SizedBox(width: 24),
+                // Right Column (1/3 width)
+                Expanded(
+                  flex: 1,
+                  child: _buildRightPanel(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          // Bottom Area (3 equal cards)
+          Expanded(
+            flex: 1,
+            child: _buildBottomCards(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Dashboard Line Stop Monitoring',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        Row(
+          children: [
+            _buildFilterButton('Date', Icons.calendar_today),
+            const SizedBox(width: 12),
+            _buildFilterButton('Line', Icons.precision_manufacturing),
+            const SizedBox(width: 12),
+            _buildFilterButton('Shift', Icons.access_time),
+          ],
+        )
+      ],
+    );
+  }
+
+  Widget _buildFilterButton(String label, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCards() {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: _buildSingleStatCard('PPM vs Target\nCurrent Month', '2000/2700', 'PPM')),
+          const SizedBox(width: 16),
+          Expanded(child: _buildSingleStatCard('AVG PPM', '2350', 'PPM')),
+          const SizedBox(width: 16),
+          Expanded(child: _buildSingleStatCard('Incident Line Stop\nCurrent Month', '15', 'Incidents')),
+          const SizedBox(width: 16),
+          Expanded(child: _buildSingleStatCard('Worst Line\nCurrent month', 'Line A', '')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSingleStatCard(String title, String value, String unit) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.green,
+                  height: 1,
+                ),
+              ),
+              if (unit.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    unit,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ]
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChartCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'PPM Monthly Monitoring',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: 20,
+                barTouchData: BarTouchData(enabled: false),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        const style = TextStyle(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        );
+                        String text = 'Week ${value.toInt()}';
+                        return SideTitleWidget(
+                          axisSide: meta.axisSide,
+                          child: Text(text, style: style),
+                        );
+                      },
+                      reservedSize: 30,
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 35,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 5,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: const Color(0xFFE2E8F0),
+                    strokeWidth: 1,
+                    dashArray: [4, 4],
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: [
+                  _buildBarGroup(1, 12, 10),
+                  _buildBarGroup(2, 15, 14),
+                  _buildBarGroup(3, 8, 12),
+                  _buildBarGroup(4, 18, 16),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  BarChartGroupData _buildBarGroup(int x, double y1, double y2) {
+    return BarChartGroupData(
+      x: x,
+      barRods: [
+        BarChartRodData(
+          toY: y1,
+          color: AppColors.lineStop,
+          width: 16,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+        ),
+        BarChartRodData(
+          toY: y2,
+          color: Colors.blueAccent,
+          width: 16,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+        ),
+      ],
+      barsSpace: 4,
+    );
+  }
+
+  Widget _buildRightPanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Top row inside the 1/3 panel
+        Expanded(
+          flex: 1,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _buildSmallDetailCard('PPM Tandem', '1450 | 8 Jam', '2% vs Last Month')),
+              const SizedBox(width: 16),
+              Expanded(child: _buildSmallDetailCard('PPM Blanking', '900 | 8 Jam', '1.5% vs Last Month')),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Bottom large card inside the 1/3 panel
+        Expanded(
+          flex: 1,
+          child: _buildTransverCard(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSmallDetailCard(String title, String value, String comparison) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.arrow_upward, color: Colors.red, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      comparison,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLargeDetailCard(String title) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const Spacer(),
+          const Center(
+            child: Text(
+              'No additional details available',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
+          ),
+          const Spacer(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransverCard() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'PPM Transver 1 - 3',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  '778 | 8 Jam',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.arrow_upward, color: Colors.red, size: 14),
+                    SizedBox(width: 4),
+                    Text(
+                      '2% vs Last Month',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomCards() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: _buildLargeDetailCard('Breakdown Problem per Categories')),
+        const SizedBox(width: 24),
+        Expanded(child: _buildLargeDetailCard('Trend Occurence per LINE')),
+        const SizedBox(width: 24),
+        Expanded(child: _buildLargeDetailCard('Improvement PPM per Dies - Top 5')),
+      ],
+    );
+  }
+}

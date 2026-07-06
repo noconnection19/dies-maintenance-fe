@@ -33,6 +33,12 @@ class LandingScreen extends StatelessWidget {
           'Monitor stock movement, availability, and warehouse performance in real time.',
       icon: Icons.inventory_2_rounded,
     ),
+    _AppModule(
+      name: 'Dies Maintenance Report',
+      description:
+          'Monitor line stop statistics and maintenance performance in real time.',
+      icon: Icons.bar_chart_rounded,
+    ),
   ];
 
   @override
