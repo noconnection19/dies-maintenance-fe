@@ -82,16 +82,16 @@ class LandingScreen extends StatelessWidget {
 
                     // Title
                     const Text(
-                      'Welcome',
+                      'Select Module Menu',
                       style: TextStyle(
-                        fontSize: 32,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: AppSizes.sm),
                     const Text(
-                      'Choose your login role below to access features\nthat match your tasks.',
+                      'Choose a module below to access features\nthat match your tasks.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -107,7 +107,15 @@ class LandingScreen extends StatelessWidget {
                         padding: const EdgeInsets.only(bottom: AppSizes.md),
                         child: _ModuleCard(
                           module: module,
-                          onTap: () => AppRouter.goToLogin(context, moduleName: module.name),
+                          onTap: () {
+                            if (module.name == 'Dies Maintenance') {
+                              AppRouter.goToDashboard(context);
+                            } else if (module.name == 'Dies Maintenance Report') {
+                              AppRouter.goToReportDashboard(context);
+                            } else if (module.name == 'Inventory Management') {
+                              AppRouter.goToInventory(context);
+                            }
+                          },
                         ),
                       ),
                     ),

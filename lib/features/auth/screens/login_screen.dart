@@ -23,12 +23,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  /// Nama modul yang dipilih dari landing page.
-  String get _moduleName {
-    final args = ModalRoute.of(context)?.settings.arguments;
-    return args is String ? args : 'Dies Maintenance';
-  }
-
   @override
   void dispose() {
     _userCtrl.dispose();
@@ -56,11 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Navigasi dilakukan di luar try-catch
     if (success && mounted) {
-      if (_moduleName == 'Dies Maintenance Report') {
-        AppRouter.goToReportDashboard(context);
-      } else {
-        AppRouter.goToDashboard(context);
-      }
+      AppRouter.goToSelectMenu(context);
     }
   }
 
@@ -109,10 +99,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: AppSizes.xl),
 
                       // Title & subtitle
-                      Text(
-                        'Welcome to $_moduleName System',
+                      const Text(
+                        'Welcome to Dies Maintenance',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
@@ -221,26 +211,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSizes.md),
-
-                      // ── Back to Option ──────────────────────────
-                      SizedBox(
-                        height: AppSizes.buttonHeight + 6,
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.arrow_back_rounded, size: AppSizes.iconMd),
-                          label: const Text(
-                            'Back to Option',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.green,
-                            backgroundColor: AppColors.greenLight,
-                            side: BorderSide.none,
-                            shape: const StadiumBorder(), // pill shape
-                          ),
                         ),
                       ),
                     ],

@@ -18,6 +18,8 @@ class UserProfileBadge extends StatelessWidget {
       onSelected: (value) {
         if (value == 'logout') {
           AppRouter.logout(context);
+        } else if (value == 'change_menu') {
+          AppRouter.goToSelectMenu(context);
         }
       },
       offset: const Offset(0, 48), // Tampilkan menu di bawah badge
@@ -25,6 +27,23 @@ class UserProfileBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       itemBuilder: (context) => [
+        const PopupMenuItem<String>(
+          value: 'change_menu',
+          child: Row(
+            children: [
+              Icon(Icons.apps_rounded, color: AppColors.green, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Change Menu',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
         const PopupMenuItem<String>(
           value: 'logout',
           child: Row(
