@@ -582,7 +582,6 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: [
-        _buildLegendItem('Target', Colors.deepOrange),
         _buildLegendItem('Tandem', Colors.green.shade700),
         _buildLegendItem('Blanking', Colors.lightGreen.shade700),
         _buildLegendItem('Transfer 1', Colors.orange.shade600),
@@ -991,7 +990,6 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
               minY: 0,
               maxY: 30,
               lineBarsData: [
-                _buildLineChartBarData([8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8], Colors.deepOrange),
                 _buildLineChartBarData([4, 5, 3, 6, 4, 6, 3, 6, 5, 4, 6, 5], Colors.green.shade700),
                 _buildLineChartBarData([2, 3, 2, 4, 3, 3, 2, 4, 3, 2, 5, 4], Colors.lightGreen.shade700),
                 _buildLineChartBarData([2, 2, 1, 2, 2, 2, 2, 3, 2, 2, 3, 2], Colors.orange.shade600),
