@@ -38,6 +38,8 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
   List<Map<String, dynamic>> _improves = [];
   List<Map<String, dynamic>> _worsens = [];
   List<Map<String, dynamic>> _trendOccurrence = [];
+  List<Map<String, dynamic>> _monthlyMonitoring = [];
+
 
   @override
   void initState() {
@@ -99,6 +101,11 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
             _trendOccurrence = List<Map<String, dynamic>>.from(response['data']['trend_occurrence']);
           } else {
             _trendOccurrence = [];
+          }
+          if (response['data']['monthly_monitoring'] != null) {
+            _monthlyMonitoring = List<Map<String, dynamic>>.from(response['data']['monthly_monitoring']);
+          } else {
+            _monthlyMonitoring = [];
           }
         });
       }
@@ -390,82 +397,136 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: BarChart(
-                          BarChartData(
-                            alignment: BarChartAlignment.spaceAround,
-                            maxY: 30,
-                            barTouchData: BarTouchData(enabled: false),
-                            titlesData: FlTitlesData(
-                              show: true,
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  getTitlesWidget: (value, meta) {
-                                    const style = TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 10,
-                                    );
-                                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                                    int index = value.toInt() - 1;
-                                    if (index >= 0 && index < 12) {
-                                      return SideTitleWidget(
-                                        axisSide: meta.axisSide,
-                                        space: 8,
-                                        child: Text('${months[index]}\n26', textAlign: TextAlign.center, style: style),
-                                      );
-                                    }
-                                    return const SizedBox.shrink();
-                                  },
-                                  reservedSize: 40,
-                                ),
-                              ),
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 35,
-                                  getTitlesWidget: (value, meta) {
-                                    return Text(
-                                      value.toInt().toString(),
-                                      style: const TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 12,
+                      Builder(
+                        builder: (context) {
+                          double maxTotalPpm = 30.0;
+                          for (final data in _monthlyMonitoring) {
+                            final tandem = (data['tandem'] as num? ?? 0.0).toDouble();
+                            final blanking = (data['blanking'] as num? ?? 0.0).toDouble();
+                            final transver1 = (data['transver1'] as num? ?? 0.0).toDouble();
+                            final transver2 = (data['transver2'] as num? ?? 0.0).toDouble();
+                            final transver3 = (data['transver3'] as num? ?? 0.0).toDouble();
+                            final total = tandem + blanking + transver1 + transver2 + transver3;
+                            if (total > maxTotalPpm) {
+                              maxTotalPpm = total;
+                            }
+                          }
+                          double chartMaxY = (maxTotalPpm * 1.15).ceilToDouble();
+                          if (chartMaxY < 30.0) chartMaxY = 30.0;
+
+                          double gridInterval = 5.0;
+                          if (chartMaxY > 50) {
+                            double rawInterval = chartMaxY / 6;
+                            if (rawInterval <= 10) {
+                              gridInterval = 10;
+                            } else if (rawInterval <= 50) {
+                              gridInterval = 50;
+                            } else if (rawInterval <= 100) {
+                              gridInterval = 100;
+                            } else if (rawInterval <= 200) {
+                              gridInterval = 200;
+                            } else if (rawInterval <= 500) {
+                              gridInterval = 500;
+                            } else if (rawInterval <= 1000) {
+                              gridInterval = 1000;
+                            } else {
+                              gridInterval = 2000;
+                            }
+                          }
+
+                          return Expanded(
+                            child: _isLoading
+                                ? const Center(child: CircularProgressIndicator())
+                                : _monthlyMonitoring.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          'No data available',
+                                          style: TextStyle(color: AppColors.textSecondary),
+                                        ),
+                                      )
+                                    : BarChart(
+                                        BarChartData(
+                                          alignment: BarChartAlignment.spaceAround,
+                                          maxY: chartMaxY,
+                                          barTouchData: BarTouchData(enabled: false),
+                                          titlesData: FlTitlesData(
+                                            show: true,
+                                            bottomTitles: AxisTitles(
+                                              sideTitles: SideTitles(
+                                                showTitles: true,
+                                                getTitlesWidget: (value, meta) {
+                                                  const style = TextStyle(
+                                                    color: AppColors.textSecondary,
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 10,
+                                                  );
+                                                  int index = value.toInt() - 1;
+                                                  if (index >= 0 && index < _monthlyMonitoring.length) {
+                                                    String monthLabel = _monthlyMonitoring[index]['month'] ?? '';
+                                                    if (monthLabel.contains(' ')) {
+                                                      monthLabel = monthLabel.replaceFirst(' ', '\n');
+                                                    }
+                                                    return SideTitleWidget(
+                                                      axisSide: meta.axisSide,
+                                                      space: 8,
+                                                      child: Text(monthLabel, textAlign: TextAlign.center, style: style),
+                                                    );
+                                                  }
+                                                  return const SizedBox.shrink();
+                                                },
+                                                reservedSize: 40,
+                                                interval: 1,
+                                              ),
+                                            ),
+                                            leftTitles: AxisTitles(
+                                              sideTitles: SideTitles(
+                                                showTitles: true,
+                                                reservedSize: 35,
+                                                getTitlesWidget: (value, meta) {
+                                                  return Text(
+                                                    value.toInt().toString(),
+                                                    style: const TextStyle(
+                                                      color: AppColors.textSecondary,
+                                                      fontSize: 12,
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                          ),
+                                          gridData: FlGridData(
+                                            show: true,
+                                            drawVerticalLine: false,
+                                            horizontalInterval: gridInterval,
+                                            getDrawingHorizontalLine: (value) => FlLine(
+                                              color: const Color(0xFFE2E8F0),
+                                              strokeWidth: 1,
+                                              dashArray: [4, 4],
+                                            ),
+                                          ),
+                                          borderData: FlBorderData(show: false),
+                                          barGroups: List.generate(_monthlyMonitoring.length, (index) {
+                                            final data = _monthlyMonitoring[index];
+                                            final tandem = (data['tandem'] as num? ?? 0.0).toDouble();
+                                            final blanking = (data['blanking'] as num? ?? 0.0).toDouble();
+                                            final transver1 = (data['transver1'] as num? ?? 0.0).toDouble();
+                                            final transver2 = (data['transver2'] as num? ?? 0.0).toDouble();
+                                            final transver3 = (data['transver3'] as num? ?? 0.0).toDouble();
+                                            return _buildBarGroup(
+                                              index + 1,
+                                              tandem,
+                                              blanking,
+                                              transver1,
+                                              transver2,
+                                              transver3,
+                                            );
+                                          }),
+                                        ),
                                       ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            ),
-                            gridData: FlGridData(
-                              show: true,
-                              drawVerticalLine: false,
-                              horizontalInterval: 5,
-                              getDrawingHorizontalLine: (value) => FlLine(
-                                color: const Color(0xFFE2E8F0),
-                                strokeWidth: 1,
-                                dashArray: [4, 4],
-                              ),
-                            ),
-                            borderData: FlBorderData(show: false),
-                            barGroups: [
-                              _buildBarGroup(1, 4, 2, 2, 1, 1),
-                              _buildBarGroup(2, 5, 3, 2, 1, 1),
-                              _buildBarGroup(3, 3, 2, 1, 1, 1),
-                              _buildBarGroup(4, 6, 4, 2, 2, 1),
-                              _buildBarGroup(5, 4, 3, 2, 1, 1),
-                              _buildBarGroup(6, 6, 3, 2, 2, 1),
-                              _buildBarGroup(7, 3, 2, 2, 1, 1),
-                              _buildBarGroup(8, 6, 4, 3, 2, 1),
-                              _buildBarGroup(9, 5, 3, 2, 2, 1),
-                              _buildBarGroup(10, 4, 2, 2, 1, 1),
-                              _buildBarGroup(11, 6, 5, 3, 2, 1),
-                              _buildBarGroup(12, 5, 4, 2, 2, 1),
-                            ],
-                          ),
-                        ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 16),
                       _buildLegend(),
