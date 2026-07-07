@@ -268,9 +268,9 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
           _buildDivider(),
           Expanded(
             child: _buildKPICard(
-              title: "Incident Line Stop - Current Month",
+              title: "Incident Line Stop",
               value: "${(kpi['incident_occ'] as num).toInt()} Occ",
-              subTitle: "▼ ${(kpi['incident_change'] as num).toInt()} vs last month",
+              subTitle: "Dalam range filter",
               isPositiveChange: false,
             ),
           ),
@@ -278,7 +278,7 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
           Expanded(
             child: _buildKPICard(
               title: "Worst Line - Current Month",
-              value: "${kpi['worst_line_name']} / ${(kpi['worst_line_ppm'] as num).toInt()} PPM",
+              value: "${kpi['worst_line_name']} / ${(kpi['worst_line_ppm'] as num).toInt()} / ${(kpi['worst_line_target'] as num).toInt()} PPM",
               subTitle: "▼ ${(kpi['worst_line_change'] as num).toInt()} vs last month",
               isPositiveChange: false,
               valueColor: Colors.redAccent,

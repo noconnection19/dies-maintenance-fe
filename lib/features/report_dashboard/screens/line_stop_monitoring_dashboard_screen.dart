@@ -1,10 +1,92 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:month_picker_dialog/month_picker_dialog.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/app_shell.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/api_constants.dart';
 
-class LineStopMonitoringDashboardScreen extends StatelessWidget {
+class LineStopMonitoringDashboardScreen extends StatefulWidget {
   const LineStopMonitoringDashboardScreen({super.key});
+
+  @override
+  State<LineStopMonitoringDashboardScreen> createState() => _LineStopMonitoringDashboardScreenState();
+}
+
+class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDashboardScreen> {
+  late DateTime _fromDate;
+  late DateTime _toDate;
+  
+  bool _isLoading = false;
+  double _ppmCurrent = 0;
+  double _avgPpm = 0;
+  int _incidentOcc = 0;
+  String _worstLineName = '-';
+  double _worstLinePpm = 0;
+  double _worstLineTarget = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _toDate = DateTime(now.year, now.month);
+    _fromDate = DateTime(now.year, now.month - 5);
+    _fetchDashboardData();
+  }
+
+  Future<void> _fetchDashboardData() async {
+    setState(() => _isLoading = true);
+    try {
+      final startDateStr = DateFormat('yyyy-MM-dd').format(DateTime(_fromDate.year, _fromDate.month, 1));
+      final lastDayOfMonth = DateTime(_toDate.year, _toDate.month + 1, 0);
+      final endDateStr = DateFormat('yyyy-MM-dd').format(lastDayOfMonth);
+      
+      final response = await ApiClient.get(
+        ApiConstants.dashboardMonitoring,
+        queryParams: {
+          'start_date': startDateStr,
+          'end_date': endDateStr,
+        },
+      );
+      
+      if (response != null && response['data'] != null && response['data']['kpi'] != null) {
+        final kpi = response['data']['kpi'];
+        setState(() {
+          _ppmCurrent = (kpi['ppm_current'] as num).toDouble();
+          _avgPpm = (kpi['avg_ppm'] as num).toDouble();
+          _incidentOcc = (kpi['incident_occ'] as num).toInt();
+          _worstLineName = kpi['worst_line_name'] as String? ?? '-';
+          _worstLinePpm = (kpi['worst_line_ppm'] as num).toDouble();
+          _worstLineTarget = (kpi['worst_line_target'] as num).toDouble();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching dashboard data: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _showMonthYearRangePicker() async {
+    final result = await showDialog<Map<String, DateTime>>(
+      context: context,
+      builder: (context) => _MonthYearRangePickerDialog(
+        initialFromDate: _fromDate,
+        initialToDate: _toDate,
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _fromDate = result['from']!;
+        _toDate = result['to']!;
+      });
+      _fetchDashboardData();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +136,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildHeader() {
+    final dateLabel = '${DateFormat('MMM yy').format(_fromDate)} - ${DateFormat('MMM yy').format(_toDate)}';
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -67,7 +150,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
         ),
         Row(
           children: [
-            _buildFilterButton('Date', Icons.calendar_today),
+            _buildFilterButton(dateLabel, Icons.calendar_today, onTap: _showMonthYearRangePicker),
             const SizedBox(width: 12),
             _buildFilterButton('Line', Icons.precision_manufacturing),
             const SizedBox(width: 12),
@@ -78,64 +161,71 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterButton(String label, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+  Widget _buildFilterButton(String label, IconData icon, {VoidCallback? onTap}) {
+    return MouseRegion(
+      cursor: onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppColors.textSecondary),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: AppColors.textSecondary),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+            ],
           ),
-          const SizedBox(width: 8),
-          const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildStatCards() {
-    return IntrinsicHeight(
+    int monthsDiff = (_toDate.year - _fromDate.year) * 12 + _toDate.month - _fromDate.month + 1;
+    int targetPpm = 1721 * monthsDiff;
+
+    return SizedBox(
+      height: 100,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: _buildSingleStatCard('PPM vs Target\nCurrent Month', '2000/2700', 'PPM')),
+          Expanded(child: _buildSingleStatCard('PPM vs Target', _isLoading ? '...' : '${_ppmCurrent.toInt()} / $targetPpm', 'PPM', '2% vs Last Month')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('AVG PPM', '2350', 'PPM')),
+          Expanded(child: _buildSingleStatCard('AVG PPM', _isLoading ? '...' : '${_avgPpm.toInt()}', 'PPM', '1.5% vs Last Month')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('Incident Line Stop\nCurrent Month', '15', 'Incidents')),
+          Expanded(child: _buildSingleStatCard('Incident Line Stop - Current Month', _isLoading ? '...' : '$_incidentOcc', 'Incidents', '3% vs Last Month')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('Worst Line\nCurrent month', 'Line A', '')),
+          Expanded(child: _buildSingleStatCard('Worst Line - Current month', _isLoading ? '...' : '$_worstLineName / ${_worstLinePpm.toInt()} / ${_worstLineTarget.toInt()}', 'PPM', '1 Rank vs Last Month')),
         ],
       ),
     );
   }
 
-  Widget _buildSingleStatCard(String title, String value, String unit) {
+  Widget _buildSingleStatCard(String title, String value, String unit, String comparison) {
     return Container(
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -144,47 +234,79 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
           ),
         ],
       ),
+      clipBehavior: Clip.hardEdge,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-              height: 1.3,
+          Container(
+            color: Colors.black,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.green,
-                  height: 1,
-                ),
-              ),
-              if (unit.isNotEmpty) ...[
-                const SizedBox(width: 6),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    unit,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textMuted,
-                      fontWeight: FontWeight.w500,
-                    ),
+          Expanded(
+            child: Container(
+              color: Colors.grey.shade800,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        value,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      if (unit.isNotEmpty) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          unit,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ]
+                    ],
                   ),
-                ),
-              ]
-            ],
+                  if (comparison.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.arrow_upward, color: Colors.redAccent, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          comparison,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -219,67 +341,178 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Expanded(
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: 20,
-                barTouchData: BarTouchData(enabled: false),
-                titlesData: FlTitlesData(
-                  show: true,
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        const style = TextStyle(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
-                        );
-                        String text = 'Week ${value.toInt()}';
-                        return SideTitleWidget(
-                          axisSide: meta.axisSide,
-                          child: Text(text, style: style),
-                        );
-                      },
-                      reservedSize: 30,
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 35,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
-                          value.toInt().toString(),
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: BarChart(
+                          BarChartData(
+                            alignment: BarChartAlignment.spaceAround,
+                            maxY: 30,
+                            barTouchData: BarTouchData(enabled: false),
+                            titlesData: FlTitlesData(
+                              show: true,
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  getTitlesWidget: (value, meta) {
+                                    const style = TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 10,
+                                    );
+                                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                    int index = value.toInt() - 1;
+                                    if (index >= 0 && index < 12) {
+                                      return SideTitleWidget(
+                                        axisSide: meta.axisSide,
+                                        space: 8,
+                                        child: Text('${months[index]}\n26', textAlign: TextAlign.center, style: style),
+                                      );
+                                    }
+                                    return const SizedBox.shrink();
+                                  },
+                                  reservedSize: 40,
+                                ),
+                              ),
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 35,
+                                  getTitlesWidget: (value, meta) {
+                                    return Text(
+                                      value.toInt().toString(),
+                                      style: const TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            ),
+                            gridData: FlGridData(
+                              show: true,
+                              drawVerticalLine: false,
+                              horizontalInterval: 5,
+                              getDrawingHorizontalLine: (value) => FlLine(
+                                color: const Color(0xFFE2E8F0),
+                                strokeWidth: 1,
+                                dashArray: [4, 4],
+                              ),
+                            ),
+                            borderData: FlBorderData(show: false),
+                            barGroups: [
+                              _buildBarGroup(1, 4, 2, 2, 1, 1),
+                              _buildBarGroup(2, 5, 3, 2, 1, 1),
+                              _buildBarGroup(3, 3, 2, 1, 1, 1),
+                              _buildBarGroup(4, 6, 4, 2, 2, 1),
+                              _buildBarGroup(5, 4, 3, 2, 1, 1),
+                              _buildBarGroup(6, 6, 3, 2, 2, 1),
+                              _buildBarGroup(7, 3, 2, 2, 1, 1),
+                              _buildBarGroup(8, 6, 4, 3, 2, 1),
+                              _buildBarGroup(9, 5, 3, 2, 2, 1),
+                              _buildBarGroup(10, 4, 2, 2, 1, 1),
+                              _buildBarGroup(11, 6, 5, 3, 2, 1),
+                              _buildBarGroup(12, 5, 4, 2, 2, 1),
+                            ],
                           ),
-                        );
-                      },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildLegend(),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.green.withOpacity(0.1),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Best Month',
+                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: RichText(
+                                      text: const TextSpan(
+                                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Inter'), // Assuming standard font
+                                        children: [
+                                          TextSpan(text: 'Jan 26 | 1500', style: TextStyle(color: AppColors.green)),
+                                          TextSpan(
+                                            text: ' PPM',
+                                            style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.normal),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Worst Month',
+                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: RichText(
+                                      text: const TextSpan(
+                                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+                                        children: [
+                                          TextSpan(text: 'Jul 26 | 3200', style: TextStyle(color: Colors.red)),
+                                          TextSpan(
+                                            text: ' PPM',
+                                            style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.normal),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 5,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: const Color(0xFFE2E8F0),
-                    strokeWidth: 1,
-                    dashArray: [4, 4],
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                barGroups: [
-                  _buildBarGroup(1, 12, 10),
-                  _buildBarGroup(2, 15, 14),
-                  _buildBarGroup(3, 8, 12),
-                  _buildBarGroup(4, 18, 16),
-                ],
-              ),
+              ],
             ),
           ),
         ],
@@ -287,24 +520,65 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
     );
   }
 
-  BarChartGroupData _buildBarGroup(int x, double y1, double y2) {
+  BarChartGroupData _buildBarGroup(int x, double v1, double v2, double v3, double v4, double v5) {
+    double total = v1 + v2 + v3 + v4 + v5;
     return BarChartGroupData(
       x: x,
       barRods: [
         BarChartRodData(
-          toY: y1,
-          color: AppColors.lineStop,
-          width: 16,
+          toY: total,
+          width: 48,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-        ),
-        BarChartRodData(
-          toY: y2,
-          color: Colors.blueAccent,
-          width: 16,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+          rodStackItems: [
+            BarChartRodStackItem(0, v1, Colors.green.shade700),
+            BarChartRodStackItem(v1, v1 + v2, Colors.lightGreen.shade700),
+            BarChartRodStackItem(v1 + v2, v1 + v2 + v3, Colors.orange.shade600),
+            BarChartRodStackItem(v1 + v2 + v3, v1 + v2 + v3 + v4, Colors.purple.shade600),
+            BarChartRodStackItem(v1 + v2 + v3 + v4, total, Colors.blue.shade700),
+          ],
         ),
       ],
-      barsSpace: 4,
+    );
+  }
+
+  Widget _buildLegend() {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        _buildLegendItem('Target', Colors.deepOrange),
+        _buildLegendItem('Tandem', Colors.green.shade700),
+        _buildLegendItem('Blanking', Colors.lightGreen.shade700),
+        _buildLegendItem('Transfer 1', Colors.orange.shade600),
+        _buildLegendItem('Transfer 2', Colors.purple.shade600),
+        _buildLegendItem('Transfer 3', Colors.blue.shade700),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(String title, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 
@@ -336,7 +610,6 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
 
   Widget _buildSmallDetailCard(String title, String value, String comparison) {
     return Container(
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -349,48 +622,57 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
           ),
         ],
       ),
+      clipBehavior: Clip.hardEdge,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  value,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.arrow_upward, color: Colors.red, size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      comparison,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
-                      ),
+            child: Container(
+              color: Colors.grey.shade100,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    value,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.arrow_upward, color: Colors.red, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        comparison,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -398,7 +680,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLargeDetailCard(String title) {
+  Widget _buildLargeDetailCard(String title, {Widget? child}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -424,14 +706,15 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
-          const Spacer(),
-          const Center(
-            child: Text(
-              'No additional details available',
-              style: TextStyle(color: AppColors.textMuted),
+          const SizedBox(height: 12),
+          Expanded(
+            child: child ?? const Center(
+              child: Text(
+                'No additional details available',
+                style: TextStyle(color: AppColors.textMuted),
+              ),
             ),
           ),
-          const Spacer(),
         ],
       ),
     );
@@ -439,7 +722,6 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
 
   Widget _buildTransverCard() {
     return Container(
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -452,48 +734,57 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
           ),
         ],
       ),
+      clipBehavior: Clip.hardEdge,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'PPM Transver 1 - 3',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: const Text(
+              'PPM Transver 1 - 3',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Text(
-                  '778 | 8 Jam',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.arrow_upward, color: Colors.red, size: 14),
-                    SizedBox(width: 4),
-                    Text(
-                      '2% vs Last Month',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
-                      ),
+            child: Container(
+              color: Colors.grey.shade100,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    '778 | 8 Jam',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.arrow_upward, color: Colors.red, size: 14),
+                      SizedBox(width: 4),
+                      Text(
+                        '2% vs Last Month',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -505,11 +796,393 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(child: _buildLargeDetailCard('Breakdown Problem per Categories')),
+        Expanded(child: _buildLargeDetailCard('Breakdown Problem per Categories', child: _buildBreakdownProblemContent())),
         const SizedBox(width: 24),
-        Expanded(child: _buildLargeDetailCard('Trend Occurence per LINE')),
+        Expanded(child: _buildLargeDetailCard('Trend Occurence per LINE', child: _buildTrendOccurenceContent())),
         const SizedBox(width: 24),
-        Expanded(child: _buildLargeDetailCard('Improvement PPM per Dies - Top 5')),
+        Expanded(child: _buildLargeDetailCard('Improvement PPM per Dies - Top 5', child: _buildImprovementContent())),
+      ],
+    );
+  }
+
+  Widget _buildBreakdownProblemContent() {
+    final data = [
+      {'problem': 'Dies Scratch', 'occ': 45, 'percent': 85},
+      {'problem': 'Dies Crack', 'occ': 30, 'percent': 60},
+      {'problem': 'Sensor Error', 'occ': 25, 'percent': 50},
+      {'problem': 'Misfeed', 'occ': 20, 'percent': 40},
+      {'problem': 'Ejector Stuck', 'occ': 15, 'percent': 30},
+      {'problem': 'Slug Mark', 'occ': 10, 'percent': 20},
+      {'problem': 'Spring Broken', 'occ': 5, 'percent': 10},
+    ];
+
+    return Column(
+      children: [
+        Row(
+          children: const [
+            Expanded(flex: 3, child: Text('Problem', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary))),
+            Expanded(flex: 1, child: Text('Occ', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary))),
+            Expanded(flex: 1, child: Text('%', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary))),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: ListView.separated(
+            itemCount: data.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final item = data[index];
+              final percent = item['percent'] as int;
+              return Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item['problem'] as String, style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: percent / 100,
+                            backgroundColor: Colors.grey.shade200,
+                            color: AppColors.green,
+                            minHeight: 6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Text('${item['occ']}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.green, fontWeight: FontWeight.w600)),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Text('$percent%', textAlign: TextAlign.right, style: const TextStyle(fontSize: 12, color: AppColors.green, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTrendOccurenceContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: LineChart(
+            LineChartData(
+              lineTouchData: LineTouchData(enabled: false),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: 5,
+                getDrawingHorizontalLine: (value) => FlLine(
+                  color: const Color(0xFFE2E8F0),
+                  strokeWidth: 1,
+                  dashArray: [4, 4],
+                ),
+              ),
+              titlesData: FlTitlesData(
+                show: true,
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      const style = TextStyle(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 10,
+                      );
+                      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                      int index = value.toInt() - 1;
+                      if (index >= 0 && index < 12) {
+                        return SideTitleWidget(
+                          axisSide: meta.axisSide,
+                          space: 8,
+                          child: Text('${months[index]}\n26', textAlign: TextAlign.center, style: style),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                    reservedSize: 40,
+                    interval: 1,
+                  ),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 35,
+                    getTitlesWidget: (value, meta) {
+                      return Text(
+                        value.toInt().toString(),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              borderData: FlBorderData(show: false),
+              minX: 1,
+              maxX: 12,
+              minY: 0,
+              maxY: 30,
+              lineBarsData: [
+                _buildLineChartBarData([8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8], Colors.deepOrange),
+                _buildLineChartBarData([4, 5, 3, 6, 4, 6, 3, 6, 5, 4, 6, 5], Colors.green.shade700),
+                _buildLineChartBarData([2, 3, 2, 4, 3, 3, 2, 4, 3, 2, 5, 4], Colors.lightGreen.shade700),
+                _buildLineChartBarData([2, 2, 1, 2, 2, 2, 2, 3, 2, 2, 3, 2], Colors.orange.shade600),
+                _buildLineChartBarData([1, 1, 1, 2, 1, 2, 1, 2, 2, 1, 2, 2], Colors.purple.shade600),
+                _buildLineChartBarData([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], Colors.blue.shade700),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildLegend(),
+      ],
+    );
+  }
+
+  LineChartBarData _buildLineChartBarData(List<double> values, Color color) {
+    return LineChartBarData(
+      spots: List.generate(values.length, (index) => FlSpot(index + 1.0, values[index])),
+      isCurved: true,
+      color: color,
+      barWidth: 3,
+      isStrokeCapRound: true,
+      dotData: FlDotData(show: false),
+      belowBarData: BarAreaData(show: false),
+    );
+  }
+
+  Widget _buildImprovementContent() {
+    final improves = [
+      {'name': 'BARI', 'old': 309, 'new': 129},
+      {'name': 'KALI', 'old': 250, 'new': 100},
+      {'name': 'TARI', 'old': 400, 'new': 200},
+      {'name': 'SARI', 'old': 150, 'new': 80},
+      {'name': 'LARI', 'old': 100, 'new': 40},
+    ];
+
+    final worsens = [
+      {'name': 'DORI', 'old': 100, 'new': 300},
+      {'name': 'MORI', 'old': 50, 'new': 200},
+      {'name': 'PORI', 'old': 120, 'new': 250},
+      {'name': 'TORI', 'old': 80, 'new': 180},
+      {'name': 'LORI', 'old': 90, 'new': 150},
+    ];
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('PPM Improves', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.green)),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: improves.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) => _buildImprovementItem(improves[index], true),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('PPM Worsens', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: worsens.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) => _buildImprovementItem(worsens[index], false),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImprovementItem(Map<String, dynamic> data, bool isImprove) {
+    final oldVal = data['old'] as int;
+    final newVal = data['new'] as int;
+    final diff = oldVal - newVal;
+    final diffText = isImprove ? '-${diff.abs()}' : '+${diff.abs()}';
+    final diffColor = isImprove ? AppColors.green : Colors.red;
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(data['name'] as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 4),
+              Text('$oldVal ➔ $newVal', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+            ],
+          ),
+          Text(
+            diffText,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: diffColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MonthYearRangePickerDialog extends StatefulWidget {
+  final DateTime initialFromDate;
+  final DateTime initialToDate;
+
+  const _MonthYearRangePickerDialog({
+    required this.initialFromDate,
+    required this.initialToDate,
+  });
+
+  @override
+  State<_MonthYearRangePickerDialog> createState() => _MonthYearRangePickerDialogState();
+}
+
+class _MonthYearRangePickerDialogState extends State<_MonthYearRangePickerDialog> {
+  late DateTime fromDate;
+  late DateTime toDate;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    fromDate = widget.initialFromDate;
+    toDate = widget.initialToDate;
+  }
+
+  void _validate() {
+    final fromDateNorm = DateTime(fromDate.year, fromDate.month);
+    final toDateNorm = DateTime(toDate.year, toDate.month);
+
+    if (fromDateNorm.isAfter(toDateNorm)) {
+      setState(() => errorMessage = '"From" month cannot be after "To" month.');
+      return;
+    }
+    
+    int monthsDiff = (toDateNorm.year - fromDateNorm.year) * 12 + toDateNorm.month - fromDateNorm.month;
+    if (monthsDiff >= 12) {
+      setState(() => errorMessage = 'Maximum range is 12 months.');
+      return;
+    }
+    
+    setState(() => errorMessage = null);
+  }
+
+  Future<void> _pickMonth(bool isFrom) async {
+    final initialDate = isFrom ? fromDate : toDate;
+    final selectedDate = await showMonthPicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (selectedDate != null) {
+      setState(() {
+        if (isFrom) {
+          fromDate = selectedDate;
+        } else {
+          toDate = selectedDate;
+        }
+      });
+      _validate();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Select Month/Year Range'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildDateSelector('From', fromDate, () => _pickMonth(true)),
+          const SizedBox(height: 16),
+          _buildDateSelector('To', toDate, () => _pickMonth(false)),
+          if (errorMessage != null) ...[
+            const SizedBox(height: 16),
+            Text(errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+          ]
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('CANCEL'),
+        ),
+        ElevatedButton(
+          onPressed: errorMessage == null 
+            ? () => Navigator.pop(context, {'from': fromDate, 'to': toDate})
+            : null,
+          child: const Text('APPLY'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateSelector(String label, DateTime date, VoidCallback onTap) {
+    return Row(
+      children: [
+        SizedBox(width: 50, child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.w600))),
+        Expanded(
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(DateFormat('MMMM yyyy').format(date)),
+                  const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
