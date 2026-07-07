@@ -412,27 +412,13 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                             }
                           }
                           double chartMaxY = (maxTotalPpm * 1.15).ceilToDouble();
-                          if (chartMaxY < 30.0) chartMaxY = 30.0;
+                          if (chartMaxY < 2000.0) chartMaxY = 2000.0;
 
-                          double gridInterval = 5.0;
-                          if (chartMaxY > 50) {
-                            double rawInterval = chartMaxY / 6;
-                            if (rawInterval <= 10) {
-                              gridInterval = 10;
-                            } else if (rawInterval <= 50) {
-                              gridInterval = 50;
-                            } else if (rawInterval <= 100) {
-                              gridInterval = 100;
-                            } else if (rawInterval <= 200) {
-                              gridInterval = 200;
-                            } else if (rawInterval <= 500) {
-                              gridInterval = 500;
-                            } else if (rawInterval <= 1000) {
-                              gridInterval = 1000;
-                            } else {
-                              gridInterval = 2000;
-                            }
+                          double gridInterval = 1000.0;
+                          if (chartMaxY <= 1000) {
+                            gridInterval = 200.0;
                           }
+
 
                           return Expanded(
                             child: _isLoading
@@ -483,18 +469,46 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                                                 showTitles: true,
                                                 reservedSize: 35,
                                                 getTitlesWidget: (value, meta) {
-                                                  return Text(
-                                                    value.toInt().toString(),
-                                                    style: const TextStyle(
-                                                      color: AppColors.textSecondary,
-                                                      fontSize: 12,
-                                                    ),
+                                                  const style = TextStyle(
+                                                    color: AppColors.textSecondary,
+                                                    fontSize: 12,
                                                   );
+                                                  final val = value.toInt();
+                                                  if (val == 0) {
+                                                    return const Text('0', style: style);
+                                                  }
+                                                  if (val % 1000 == 0) {
+                                                    return Text('${val ~/ 1000}K', style: style);
+                                                  }
+                                                  final label = val >= 1000
+                                                      ? '${(val / 1000).toStringAsFixed(1).replaceAll('.0', '')}K'
+                                                      : '$val';
+                                                  return Text(label, style: style);
                                                 },
                                               ),
                                             ),
                                             topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                                             rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                          ),
+                                          extraLinesData: ExtraLinesData(
+                                            horizontalLines: [
+                                              HorizontalLine(
+                                                y: 1721.0,
+                                                color: Colors.redAccent,
+                                                strokeWidth: 2,
+                                                dashArray: [6, 3],
+                                                label: HorizontalLineLabel(
+                                                  show: true,
+                                                  labelResolver: (line) => 'Target: 1721',
+                                                  style: const TextStyle(
+                                                    color: Colors.redAccent,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 10,
+                                                  ),
+                                                  alignment: Alignment.topRight,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                           gridData: FlGridData(
                                             show: true,
@@ -529,7 +543,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                         },
                       ),
                       const SizedBox(height: 16),
-                      _buildLegend(),
+                      _buildLegend(showTarget: true),
                     ],
                   ),
                 ),
@@ -643,7 +657,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
     );
   }
 
-  Widget _buildLegend() {
+  Widget _buildLegend({bool showTarget = false}) {
     return Wrap(
       spacing: 16,
       runSpacing: 8,
@@ -654,6 +668,26 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
         _buildLegendItem('Transfer 1', Colors.orange.shade600),
         _buildLegendItem('Transfer 2', Colors.purple.shade600),
         _buildLegendItem('Transfer 3', Colors.blue.shade700),
+        if (showTarget)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 16,
+                height: 2,
+                color: Colors.redAccent,
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'Target Line (1721 PPM)',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
       ],
     );
   }
