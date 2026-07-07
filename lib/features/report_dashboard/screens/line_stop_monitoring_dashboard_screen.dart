@@ -497,16 +497,6 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                                                 color: Colors.redAccent,
                                                 strokeWidth: 2,
                                                 dashArray: [6, 3],
-                                                label: HorizontalLineLabel(
-                                                  show: true,
-                                                  labelResolver: (line) => 'Target: 1721',
-                                                  style: const TextStyle(
-                                                    color: Colors.redAccent,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 10,
-                                                  ),
-                                                  alignment: Alignment.topRight,
-                                                ),
                                               ),
                                             ],
                                           ),
