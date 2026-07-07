@@ -25,6 +25,15 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
   String _worstLineName = '-';
   double _worstLinePpm = 0;
   double _worstLineTarget = 0;
+  Map<String, dynamic> _lineDetails = {
+    'tandem': {'ppm': 0, 'hours': 0},
+    'blanking': {'ppm': 0, 'hours': 0},
+    'transver': {'ppm': 0, 'hours': 0},
+  };
+  String _bestMonthName = '-';
+  double _bestMonthValue = 0;
+  String _worstMonthName = '-';
+  double _worstMonthValue = 0;
 
   @override
   void initState() {
@@ -50,15 +59,25 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
         },
       );
       
-      if (response != null && response['data'] != null && response['data']['kpi'] != null) {
+      if (response != null && response['data'] != null) {
         final kpi = response['data']['kpi'];
+        final lineDetails = response['data']['line_details'];
         setState(() {
-          _ppmCurrent = (kpi['ppm_current'] as num).toDouble();
-          _avgPpm = (kpi['avg_ppm'] as num).toDouble();
-          _incidentOcc = (kpi['incident_occ'] as num).toInt();
-          _worstLineName = kpi['worst_line_name'] as String? ?? '-';
-          _worstLinePpm = (kpi['worst_line_ppm'] as num).toDouble();
-          _worstLineTarget = (kpi['worst_line_target'] as num).toDouble();
+          if (kpi != null) {
+            _ppmCurrent = (kpi['ppm_current'] as num).toDouble();
+            _avgPpm = (kpi['avg_ppm'] as num).toDouble();
+            _incidentOcc = (kpi['incident_occ'] as num).toInt();
+            _worstLineName = kpi['worst_line_name'] as String? ?? '-';
+            _worstLinePpm = (kpi['worst_line_ppm'] as num).toDouble();
+            _worstLineTarget = (kpi['worst_line_target'] as num).toDouble();
+          }
+          _bestMonthName = response['data']['best_month_name'] as String? ?? '-';
+          _bestMonthValue = (response['data']['best_month_value'] as num? ?? 0).toDouble();
+          _worstMonthName = response['data']['worst_month_name'] as String? ?? '-';
+          _worstMonthValue = (response['data']['worst_month_value'] as num? ?? 0).toDouble();
+          if (lineDetails != null) {
+            _lineDetails = Map<String, dynamic>.from(lineDetails);
+          }
         });
       }
     } catch (e) {
@@ -216,7 +235,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
           const SizedBox(width: 16),
           Expanded(child: _buildSingleStatCard('Incident Line Stop - Current Month', _isLoading ? '...' : '$_incidentOcc', 'Incidents', '3% vs Last Month')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('Worst Line - Current month', _isLoading ? '...' : '$_worstLineName / ${_worstLinePpm.toInt()} / ${_worstLineTarget.toInt()}', 'PPM', '1 Rank vs Last Month')),
+          Expanded(child: _buildSingleStatCard('Worst Line - Current month', _isLoading ? '...' : '$_worstLineName / ${_worstLineTarget.toInt()}', 'PPM', '1 Rank vs Last Month')),
         ],
       ),
     );
@@ -455,11 +474,11 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                                   child: Align(
                                     alignment: Alignment.centerLeft,
                                     child: RichText(
-                                      text: const TextSpan(
-                                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Inter'), // Assuming standard font
+                                      text: TextSpan(
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
                                         children: [
-                                          TextSpan(text: 'Jan 26 | 1500', style: TextStyle(color: AppColors.green)),
-                                          TextSpan(
+                                          TextSpan(text: '$_bestMonthName | ${_bestMonthValue.toInt()}', style: const TextStyle(color: AppColors.green)),
+                                          const TextSpan(
                                             text: ' PPM',
                                             style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.normal),
                                           ),
@@ -491,11 +510,11 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                                   child: Align(
                                     alignment: Alignment.centerLeft,
                                     child: RichText(
-                                      text: const TextSpan(
-                                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+                                      text: TextSpan(
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
                                         children: [
-                                          TextSpan(text: 'Jul 26 | 3200', style: TextStyle(color: Colors.red)),
-                                          TextSpan(
+                                          TextSpan(text: '$_worstMonthName | ${_worstMonthValue.toInt()}', style: const TextStyle(color: Colors.red)),
+                                          const TextSpan(
                                             text: ' PPM',
                                             style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.normal),
                                           ),
@@ -592,9 +611,25 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: _buildSmallDetailCard('PPM Tandem', '1450 | 8 Jam', '2% vs Last Month')),
+              Expanded(
+                child: _buildSmallDetailCard(
+                  'PPM Tandem',
+                  _isLoading
+                      ? '...'
+                      : '${(_lineDetails['tandem']['ppm'] as num).toInt()} | ${(_lineDetails['tandem']['hours'] as num).toInt()} Jam',
+                  '2% vs Last Month',
+                ),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: _buildSmallDetailCard('PPM Blanking', '900 | 8 Jam', '1.5% vs Last Month')),
+              Expanded(
+                child: _buildSmallDetailCard(
+                  'PPM Blanking',
+                  _isLoading
+                      ? '...'
+                      : '${(_lineDetails['blanking']['ppm'] as num).toInt()} | ${(_lineDetails['blanking']['hours'] as num).toInt()} Jam',
+                  '1.5% vs Last Month',
+                ),
+              ),
             ],
           ),
         ),
@@ -758,10 +793,12 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Text(
-                    '778 | 8 Jam',
+                  Text(
+                    _isLoading
+                        ? '...'
+                        : '${(_lineDetails['transver']['ppm'] as num).toInt()} | ${(_lineDetails['transver']['hours'] as num).toInt()} Jam',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,

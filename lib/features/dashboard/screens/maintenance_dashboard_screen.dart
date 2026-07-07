@@ -38,7 +38,7 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
   final Map<String, String?> _lineCodeMap = {
     "All Line": null,
     "Blanking": "BL",
-    "Tandem": "TD1",
+    "Tandem": "TD",
     "Transver 1": "TR1",
     "Transver 2": "TR2",
     "Transver 3": "TR3",
@@ -278,7 +278,7 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
           Expanded(
             child: _buildKPICard(
               title: "Worst Line - Current Month",
-              value: "${kpi['worst_line_name']} / ${(kpi['worst_line_ppm'] as num).toInt()} / ${(kpi['worst_line_target'] as num).toInt()} PPM",
+              value: "${kpi['worst_line_name']} / ${(kpi['worst_line_target'] as num).toInt()} PPM",
               subTitle: "▼ ${(kpi['worst_line_change'] as num).toInt()} vs last month",
               isPositiveChange: false,
               valueColor: Colors.redAccent,
@@ -366,16 +366,14 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
                     children: [
                       _buildHighlightBox(
                         title: "Best Month",
-                        month: _dashboardData!['best_month_name'] ?? "-",
-                        val: "${(_dashboardData!['best_month_value'] as num).toInt()} PPM",
+                        value: "${_dashboardData!['best_month_name'] ?? "-"} | ${(_dashboardData!['best_month_value'] as num).toInt()} PPM",
                         color: Colors.green[50]!,
                         textColor: Colors.green[700]!,
                       ),
                       const SizedBox(height: 12),
                       _buildHighlightBox(
                         title: "Worst Month",
-                        month: _dashboardData!['worst_month_name'] ?? "-",
-                        val: "${(_dashboardData!['worst_month_value'] as num).toInt()} PPM",
+                        value: "${_dashboardData!['worst_month_name'] ?? "-"} | ${(_dashboardData!['worst_month_value'] as num).toInt()} PPM",
                         color: Colors.red[50]!,
                         textColor: Colors.red[700]!,
                       ),
@@ -425,8 +423,7 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
 
   Widget _buildHighlightBox({
     required String title,
-    required String month,
-    required String val,
+    required String value,
     required Color color,
     required Color textColor,
   }) {
@@ -442,9 +439,7 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
         children: [
           Text(title, style: TextStyle(fontSize: 10, color: textColor, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text(month, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: 2),
-          Text(val, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
+          Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
         ],
       ),
     );
