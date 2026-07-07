@@ -35,6 +35,8 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
   String _worstMonthName = '-';
   double _worstMonthValue = 0;
   List<Map<String, dynamic>> _breakdownCategories = [];
+  List<Map<String, dynamic>> _improves = [];
+  List<Map<String, dynamic>> _worsens = [];
 
   @override
   void initState() {
@@ -83,6 +85,14 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
             _breakdownCategories = List<Map<String, dynamic>>.from(response['data']['breakdown_categories']);
           } else {
             _breakdownCategories = [];
+          }
+          final improvements = response['data']['improvements'];
+          if (improvements != null) {
+            _improves = List<Map<String, dynamic>>.from(improvements['improves'] ?? []);
+            _worsens = List<Map<String, dynamic>>.from(improvements['worsens'] ?? []);
+          } else {
+            _improves = [];
+            _worsens = [];
           }
         });
       }
@@ -1010,21 +1020,12 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
   }
 
   Widget _buildImprovementContent() {
-    final improves = [
-      {'name': 'BARI', 'old': 309, 'new': 129},
-      {'name': 'KALI', 'old': 250, 'new': 100},
-      {'name': 'TARI', 'old': 400, 'new': 200},
-      {'name': 'SARI', 'old': 150, 'new': 80},
-      {'name': 'LARI', 'old': 100, 'new': 40},
-    ];
-
-    final worsens = [
-      {'name': 'DORI', 'old': 100, 'new': 300},
-      {'name': 'MORI', 'old': 50, 'new': 200},
-      {'name': 'PORI', 'old': 120, 'new': 250},
-      {'name': 'TORI', 'old': 80, 'new': 180},
-      {'name': 'LORI', 'old': 90, 'new': 150},
-    ];
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_improves.isEmpty && _worsens.isEmpty) {
+      return const Center(child: Text('No data found', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)));
+    }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1037,9 +1038,9 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
               const SizedBox(height: 8),
               Expanded(
                 child: ListView.separated(
-                  itemCount: improves.length,
+                  itemCount: _improves.length,
                   separatorBuilder: (context, index) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) => _buildImprovementItem(improves[index], true),
+                  itemBuilder: (context, index) => _buildImprovementItem(_improves[index], true),
                 ),
               ),
             ],
@@ -1054,9 +1055,9 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
               const SizedBox(height: 8),
               Expanded(
                 child: ListView.separated(
-                  itemCount: worsens.length,
+                  itemCount: _worsens.length,
                   separatorBuilder: (context, index) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) => _buildImprovementItem(worsens[index], false),
+                  itemBuilder: (context, index) => _buildImprovementItem(_worsens[index], false),
                 ),
               ),
             ],
@@ -1066,11 +1067,10 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
     );
   }
 
-  Widget _buildImprovementItem(Map<String, dynamic> data, bool isImprove) {
-    final oldVal = data['old'] as int;
-    final newVal = data['new'] as int;
-    final diff = oldVal - newVal;
-    final diffText = isImprove ? '-${diff.abs()}' : '+${diff.abs()}';
+  Widget _buildImprovementItem(Map<String, dynamic> item, bool isImprove) {
+    final problemName = item['problem'] ?? item['Problem'] ?? 'Unknown';
+    final occ = ((item['occ'] ?? item['Occ'] ?? 0) as num).toInt();
+    final ppm = ((item['ppm'] ?? 0) as num).toInt();
     final diffColor = isImprove ? AppColors.green : Colors.red;
 
     return Container(
@@ -1086,13 +1086,13 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(data['name'] as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text(problemName as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 4),
-              Text('$oldVal ➔ $newVal', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+              Text('$occ Occ', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
             ],
           ),
           Text(
-            diffText,
+            '$ppm PPM',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,

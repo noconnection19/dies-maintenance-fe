@@ -624,13 +624,17 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
   }
 
   Widget _buildImproveRow(Map<String, dynamic> item, {required bool isImprove}) {
+    final problemName = item['problem'] ?? item['part_no'] ?? 'Unknown';
+    final occ = ((item['occ'] ?? 0) as num).toInt();
+    final ppmVal = ((item['ppm'] ?? item['to_ppm'] ?? 0.0) as num).toInt();
+    final diff = ((item['diff'] ?? 0.0) as num).toDouble();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            item['part_no'],
+            problemName,
             style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -639,7 +643,7 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "${(item['from_ppm'] as num).toInt()} → ${(item['to_ppm'] as num).toInt()} | ${(item['occ'] as num).toInt()} Occ",
+                "$occ Occ | $ppmVal PPM",
                 style: const TextStyle(fontSize: 8, color: AppColors.textSecondary),
               ),
               Row(
@@ -650,7 +654,7 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
                     size: 12,
                   ),
                   Text(
-                    "${(item['diff'] as num).toStringAsFixed(1)}",
+                    "${diff.toStringAsFixed(1)}",
                     style: TextStyle(fontSize: 8, color: isImprove ? Colors.green : Colors.red, fontWeight: FontWeight.bold),
                   ),
                 ],
