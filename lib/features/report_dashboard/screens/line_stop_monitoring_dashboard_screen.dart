@@ -258,13 +258,13 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: _buildSingleStatCard('PPM vs Target', _isLoading ? '...' : '${_ppmCurrent.toInt()} / $targetPpm', 'PPM', '2% vs Last Month')),
+          Expanded(child: _buildSingleStatCard('PPM vs Target', _isLoading ? '...' : '${_ppmCurrent.toInt()} / $targetPpm', 'PPM', '')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('AVG PPM', _isLoading ? '...' : '${_avgPpm.toInt()}', 'PPM', '1.5% vs Last Month')),
+          Expanded(child: _buildSingleStatCard('AVG PPM', _isLoading ? '...' : '${_avgPpm.toInt()}', 'PPM', '')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('Incident Line Stop - Current Month', _isLoading ? '...' : '$_incidentOcc', 'Incidents', '3% vs Last Month')),
+          Expanded(child: _buildSingleStatCard('Incident Line Stop - Current Month', _isLoading ? '...' : '$_incidentOcc', 'Incidents', '')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('Worst Line - Current month', _isLoading ? '...' : '$_worstLineName / ${_worstLineTarget.toInt()}', 'PPM', '1 Rank vs Last Month')),
+          Expanded(child: _buildSingleStatCard('Worst Line - Current month', _isLoading ? '...' : '$_worstLineName / ${_worstLineTarget.toInt()}', 'PPM', '')),
         ],
       ),
     );
@@ -723,7 +723,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                   _isLoading
                       ? '...'
                       : '${(_lineDetails['tandem']['ppm'] as num).toInt()} | ${(_lineDetails['tandem']['hours'] as num).toInt()} Jam',
-                  '2% vs Last Month',
+                  '',
                 ),
               ),
               const SizedBox(width: 16),
@@ -733,7 +733,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                   _isLoading
                       ? '...'
                       : '${(_lineDetails['blanking']['ppm'] as num).toInt()} | ${(_lineDetails['blanking']['hours'] as num).toInt()} Jam',
-                  '1.5% vs Last Month',
+                  '',
                 ),
               ),
             ],
@@ -796,22 +796,24 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.arrow_upward, color: Colors.red, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        comparison,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.red,
-                          fontWeight: FontWeight.w600,
+                  if (comparison.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.arrow_upward, color: Colors.red, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          comparison,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.red,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -909,22 +911,6 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.arrow_upward, color: Colors.red, size: 14),
-                      SizedBox(width: 4),
-                      Text(
-                        '2% vs Last Month',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.red,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
