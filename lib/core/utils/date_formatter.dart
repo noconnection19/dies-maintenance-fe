@@ -59,8 +59,13 @@ class DateFormatter {
     if (value == null || value.isEmpty) return null;
     try {
       final cleanStr = value.replaceAll(' ', 'T');
-      final utcStr = cleanStr.endsWith('Z') ? cleanStr : '${cleanStr}Z';
-      return DateTime.parse(utcStr).toLocal();
+      // Jika string sudah memiliki penanda timezone (Z atau +/- offset), parse dan ubah ke local time.
+      // Jika tidak, parse langsung sebagai local time.
+      if (cleanStr.contains('Z') || cleanStr.contains('+') || (cleanStr.lastIndexOf('-') > 10)) {
+        return DateTime.parse(cleanStr).toLocal();
+      } else {
+        return DateTime.parse(cleanStr);
+      }
     } catch (_) {
       try {
         return DateTime.parse(value).toLocal();

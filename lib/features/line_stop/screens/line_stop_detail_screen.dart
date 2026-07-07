@@ -61,12 +61,17 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
     super.initState();
     _task = widget.task;
 
-    // Timer 15 menit mengambil hitung mundur dari created_dt (stored in UTC)
+    // Timer 15 menit mengambil hitung mundur dari created_dt
     if (_task.createdDt != null) {
       try {
         final raw = _task.createdDt!.replaceAll(' ', 'T');
-        final utcStr = raw.endsWith('Z') ? raw : '${raw}Z';
-        final createdTime = DateTime.parse(utcStr); // already UTC
+        final DateTime createdTime;
+        if (raw.contains('Z') || raw.contains('+') || (raw.lastIndexOf('-') > 10)) {
+          createdTime = DateTime.parse(raw).toUtc();
+        } else {
+          // Jika naive local time (UTC+7), parse sebagai local lalu jadikan UTC
+          createdTime = DateTime.parse(raw).toUtc();
+        }
         final elapsed = DateTime.now().toUtc().difference(createdTime).inSeconds;
         _secondsRemaining = 900 - elapsed;
       } catch (_) {
