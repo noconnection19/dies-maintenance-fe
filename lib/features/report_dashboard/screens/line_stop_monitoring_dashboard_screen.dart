@@ -37,6 +37,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
   List<Map<String, dynamic>> _breakdownCategories = [];
   List<Map<String, dynamic>> _improves = [];
   List<Map<String, dynamic>> _worsens = [];
+  List<Map<String, dynamic>> _trendOccurrence = [];
 
   @override
   void initState() {
@@ -93,6 +94,11 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
           } else {
             _improves = [];
             _worsens = [];
+          }
+          if (response['data']['trend_occurrence'] != null) {
+            _trendOccurrence = List<Map<String, dynamic>>.from(response['data']['trend_occurrence']);
+          } else {
+            _trendOccurrence = [];
           }
         });
       }
@@ -566,7 +572,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
           borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
           rodStackItems: [
             BarChartRodStackItem(0, v1, Colors.green.shade700),
-            BarChartRodStackItem(v1, v1 + v2, Colors.lightGreen.shade700),
+            BarChartRodStackItem(v1, v1 + v2, Colors.red.shade600),
             BarChartRodStackItem(v1 + v2, v1 + v2 + v3, Colors.orange.shade600),
             BarChartRodStackItem(v1 + v2 + v3, v1 + v2 + v3 + v4, Colors.purple.shade600),
             BarChartRodStackItem(v1 + v2 + v3 + v4, total, Colors.blue.shade700),
@@ -583,7 +589,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
       alignment: WrapAlignment.center,
       children: [
         _buildLegendItem('Tandem', Colors.green.shade700),
-        _buildLegendItem('Blanking', Colors.lightGreen.shade700),
+        _buildLegendItem('Blanking', Colors.red.shade600),
         _buildLegendItem('Transfer 1', Colors.orange.shade600),
         _buildLegendItem('Transfer 2', Colors.purple.shade600),
         _buildLegendItem('Transfer 3', Colors.blue.shade700),
@@ -923,6 +929,34 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
   }
 
   Widget _buildTrendOccurenceContent() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_trendOccurrence.isEmpty) {
+      return const Center(child: Text('No data found', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)));
+    }
+
+    double calculatedMaxY = 10;
+    for (var item in _trendOccurrence) {
+      double blanking = ((item['blanking'] ?? 0) as num).toDouble();
+      double tandem = ((item['tandem'] ?? 0) as num).toDouble();
+      double tr1 = ((item['transver1'] ?? 0) as num).toDouble();
+      double tr2 = ((item['transver2'] ?? 0) as num).toDouble();
+      double tr3 = ((item['transver3'] ?? 0) as num).toDouble();
+      double m = [blanking, tandem, tr1, tr2, tr3].reduce((curr, next) => curr > next ? curr : next);
+      if (m > calculatedMaxY) {
+        calculatedMaxY = m;
+      }
+    }
+    calculatedMaxY = ((calculatedMaxY / 5).ceil() * 5).toDouble();
+    if (calculatedMaxY < 10) calculatedMaxY = 10;
+
+    final tandemValues = _trendOccurrence.map((item) => ((item['tandem'] ?? 0) as num).toDouble()).toList();
+    final blankingValues = _trendOccurrence.map((item) => ((item['blanking'] ?? 0) as num).toDouble()).toList();
+    final tr1Values = _trendOccurrence.map((item) => ((item['transver1'] ?? 0) as num).toDouble()).toList();
+    final tr2Values = _trendOccurrence.map((item) => ((item['transver2'] ?? 0) as num).toDouble()).toList();
+    final tr3Values = _trendOccurrence.map((item) => ((item['transver3'] ?? 0) as num).toDouble()).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -951,13 +985,15 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                         fontWeight: FontWeight.w500,
                         fontSize: 10,
                       );
-                      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                       int index = value.toInt() - 1;
-                      if (index >= 0 && index < 12) {
+                      if (index >= 0 && index < _trendOccurrence.length) {
+                        final monthName = _trendOccurrence[index]['month'] as String? ?? '';
+                        final parts = monthName.split(' ');
+                        final displayLabel = parts.length >= 2 ? '${parts[0]}\n${parts[1]}' : monthName;
                         return SideTitleWidget(
                           axisSide: meta.axisSide,
                           space: 8,
-                          child: Text('${months[index]}\n26', textAlign: TextAlign.center, style: style),
+                          child: Text(displayLabel, textAlign: TextAlign.center, style: style),
                         );
                       }
                       return const SizedBox.shrink();
@@ -986,15 +1022,15 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
               ),
               borderData: FlBorderData(show: false),
               minX: 1,
-              maxX: 12,
+              maxX: _trendOccurrence.length.toDouble(),
               minY: 0,
-              maxY: 30,
+              maxY: calculatedMaxY,
               lineBarsData: [
-                _buildLineChartBarData([4, 5, 3, 6, 4, 6, 3, 6, 5, 4, 6, 5], Colors.green.shade700),
-                _buildLineChartBarData([2, 3, 2, 4, 3, 3, 2, 4, 3, 2, 5, 4], Colors.lightGreen.shade700),
-                _buildLineChartBarData([2, 2, 1, 2, 2, 2, 2, 3, 2, 2, 3, 2], Colors.orange.shade600),
-                _buildLineChartBarData([1, 1, 1, 2, 1, 2, 1, 2, 2, 1, 2, 2], Colors.purple.shade600),
-                _buildLineChartBarData([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], Colors.blue.shade700),
+                _buildLineChartBarData(tandemValues, Colors.green.shade700),
+                _buildLineChartBarData(blankingValues, Colors.red.shade600),
+                _buildLineChartBarData(tr1Values, Colors.orange.shade600),
+                _buildLineChartBarData(tr2Values, Colors.purple.shade600),
+                _buildLineChartBarData(tr3Values, Colors.blue.shade700),
               ],
             ),
           ),
