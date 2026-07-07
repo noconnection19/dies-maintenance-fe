@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/widgets/app_shell.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../dashboard/data/line_stop_service.dart';
 import '../widgets/add_dies_dialog.dart';
 import 'line_stop_detail_screen.dart';
@@ -47,16 +48,18 @@ class _LineStopScreenState extends State<LineStopScreen> {
         size: _perPage,
         status: status,
       );
+      if (!mounted) return;
       setState(() {
         _tasks = res['items'] as List<DiesTask>;
         _totalTasks = res['total'] as int;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load line stop: $e')),
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -446,7 +449,7 @@ class _DataTable extends StatelessWidget {
                     final item = entry.value;
 
                     // Tampilkan tanggal perbaikan atau pembuatan
-                    final dateTimeStr = item.repairedDt ?? item.createdDt ?? '-';
+                    final dateTimeStr = DateFormatter.display(item.repairedDt ?? item.createdDt);
                     
                     return DataRow(
                       color: WidgetStateProperty.resolveWith<Color?>((states) {
@@ -460,7 +463,27 @@ class _DataTable extends StatelessWidget {
                         DataCell(_ShiftBadge(shift: item.shift ?? '-')),
                         DataCell(Text(item.lineCd ?? '-', style: _cellStyle)),
                         DataCell(Text(item.machineCd ?? '-', style: _cellStyle)),
-                        DataCell(Text(item.repairedBy ?? '-', style: _cellStyle)),
+                        DataCell(
+                          Builder(
+                            builder: (context) {
+                              final picText = (item.picUsernames != null && item.picUsernames!.isNotEmpty)
+                                  ? item.picUsernames!.join(', ')
+                                  : (item.repairedBy ?? '-');
+                              if (picText.length > 15) {
+                                return Tooltip(
+                                  message: picText,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.textPrimary.withValues(alpha: 0.9),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  textStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                                  child: Text('${picText.substring(0, 12)}...', style: _cellStyle),
+                                );
+                              }
+                              return Text(picText, style: _cellStyle);
+                            },
+                          ),
+                        ),
                         DataCell(_DetailButton(onTap: () {
                           onDetailTap(item);
                         })),

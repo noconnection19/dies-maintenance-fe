@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/widgets/app_loading.dart';
@@ -16,15 +17,18 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
   XFile? _imageFile;
   bool _isFetching = true;
   bool _isSubmitting = false;
+  bool _isLoadingSubData = false;
 
   List<Map<String, dynamic>> _dies = [];
+  List<Map<String, dynamic>> _operations = [];
   List<Map<String, dynamic>> _machines = [];
   List<Map<String, dynamic>> _pics = [];
 
   String? _selectedPartNo;
+  String? _selectedProcess;
   String? _selectedMachineCd;
   String? _selectedShift;
-  String? _selectedPic;
+  List<String> _selectedPics = [];
 
   @override
   void initState() {
@@ -35,12 +39,10 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
   Future<void> _fetchMasterData() async {
     try {
       final diesData = await LineStopService.getDies();
-      final machinesData = await LineStopService.getMachines();
       final picsData = await LineStopService.getPics();
 
       setState(() {
         _dies = diesData;
-        _machines = machinesData;
         _pics = picsData;
         _isFetching = false;
       });
@@ -48,6 +50,40 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
       setState(() => _isFetching = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load master data: $e')),
+      );
+    }
+  }
+
+  Future<void> _fetchMachines(String partNo) async {
+    setState(() => _isLoadingSubData = true);
+    try {
+      final machinesData = await LineStopService.getMachinesForPart(partNo);
+
+      setState(() {
+        _machines = machinesData;
+        _isLoadingSubData = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingSubData = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load machines: $e')),
+      );
+    }
+  }
+
+  Future<void> _fetchOperations(String partNo, String machineCd) async {
+    setState(() => _isLoadingSubData = true);
+    try {
+      final operationsData = await LineStopService.getOperationsForMachine(partNo, machineCd);
+
+      setState(() {
+        _operations = operationsData;
+        _isLoadingSubData = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingSubData = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load operations: $e')),
       );
     }
   }
@@ -63,22 +99,68 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
     }
   }
 
-  void _removePhoto() {
-    setState(() {
-      _imageFile = null;
-    });
+  void _showZoomedImage() {
+    if (_imageFile == null) return;
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            Center(
+              child: InteractiveViewer(
+                maxScale: 4.0,
+                child: Image.network(_imageFile!.path),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: CircleAvatar(
+                backgroundColor: Colors.black45,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _submitForm() async {
-    if (_selectedPartNo == null || _selectedMachineCd == null || _selectedShift == null) {
+    if (_selectedPartNo == null || _selectedProcess == null || _selectedMachineCd == null || _selectedShift == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all required fields (*)')),
       );
       return;
     }
 
+    if (_imageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please capture a photo for documentation before saving.')),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
+      // 1. Upload photo first
+      int? uploadedBeforeId;
+      if (_imageFile != null) {
+        final attachment = await LineStopService.uploadAttachment(_imageFile!);
+        if (attachment.containsKey('data')) {
+          final dataMap = attachment['data'] as Map<String, dynamic>;
+          uploadedBeforeId = dataMap['id'] as int?;
+        } else {
+          uploadedBeforeId = attachment['id'] as int?;
+        }
+      }
+
       // Find line_cd from selected machine
       final machine = _machines.firstWhere((m) => m['machine_cd'] == _selectedMachineCd);
       final lineCd = machine['line_cd'] as String;
@@ -94,9 +176,12 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
         machineCd: _selectedMachineCd,
         lineCd: lineCd,
         shift: _selectedShift,
-        repairedBy: _selectedPic, // PIC username
+        repairedBy: null,
         model: model,
         status: 'OPEN',
+        documentationBeforeId: uploadedBeforeId,
+        operationSeq: _selectedProcess,
+        picUsernames: _selectedPics,
       );
 
       final savedTask = await LineStopService.create(newTask);
@@ -171,7 +256,7 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
                 ),
                 const SizedBox(height: 24),
 
-                // ── Form Row 1: Part Number & Machine (Process) ───────────────────
+                // ── Form Row 1: Part Number & Machine ───────────────────
                 Row(
                   children: [
                     Expanded(
@@ -188,15 +273,32 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
                             child: Text('$partNo ($model)'),
                           );
                         }).toList(),
-                        onChanged: (val) => setState(() => _selectedPartNo = val),
+                        onChanged: (val) {
+                          if (val != _selectedPartNo) {
+                            setState(() {
+                              _selectedPartNo = val;
+                              _selectedMachineCd = null;
+                              _selectedProcess = null;
+                              _operations = [];
+                              _machines = [];
+                            });
+                            if (val != null) {
+                              _fetchMachines(val);
+                            }
+                          }
+                        },
                       ),
                     ),
                     const SizedBox(width: 24),
                     Expanded(
                       child: _buildDropdown(
-                        label: 'Process (Machine)',
+                        label: 'Machine',
                         isRequired: true,
-                        hint: 'Select Machine',
+                        hint: _isLoadingSubData
+                            ? 'Loading...'
+                            : (_selectedPartNo == null
+                                ? 'Select Part Number first'
+                                : 'Select Machine'),
                         value: _selectedMachineCd,
                         items: _machines.map((m) {
                           final code = m['machine_cd'] as String;
@@ -206,16 +308,53 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
                             child: Text('$code - $name'),
                           );
                         }).toList(),
-                        onChanged: (val) => setState(() => _selectedMachineCd = val),
+                        onChanged: _selectedPartNo == null
+                            ? null
+                            : (val) {
+                                if (val != _selectedMachineCd) {
+                                  setState(() {
+                                    _selectedMachineCd = val;
+                                    _selectedProcess = null;
+                                    _operations = [];
+                                  });
+                                  if (val != null && _selectedPartNo != null) {
+                                    _fetchOperations(_selectedPartNo!, val);
+                                  }
+                                }
+                              },
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
 
-                // ── Form Row 2: Shift & Add PIC ─────────────────────────────────
+                // ── Form Row 2: Process & Shift ───────────────────
                 Row(
                   children: [
+                    Expanded(
+                      child: _buildDropdown(
+                        label: 'Process',
+                        isRequired: true,
+                        hint: _isLoadingSubData
+                            ? 'Loading...'
+                            : (_selectedMachineCd == null
+                                ? 'Select Machine first'
+                                : 'Select Process'),
+                        value: _selectedProcess,
+                        items: _operations.map((o) {
+                          final op = o['op'] as String;
+                          final proses = o['proses'] as String;
+                          return DropdownMenuItem<String>(
+                            value: op,
+                            child: Text('$op - $proses'),
+                          );
+                        }).toList(),
+                        onChanged: _selectedMachineCd == null
+                            ? null
+                            : (val) => setState(() => _selectedProcess = val),
+                      ),
+                    ),
+                    const SizedBox(width: 24),
                     Expanded(
                       child: _buildDropdown(
                         label: 'Shift',
@@ -223,20 +362,26 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
                         hint: 'Select Shift',
                         value: _selectedShift,
                         items: const [
-                          DropdownMenuItem(value: 'B', child: Text('Blue Shift')),
-                          DropdownMenuItem(value: 'R', child: Text('Red Shift')),
+                           DropdownMenuItem(value: 'B', child: Text('Blue Shift')),
+                           DropdownMenuItem(value: 'R', child: Text('Red Shift')),
                         ],
                         onChanged: (val) => setState(() => _selectedShift = val),
                       ),
                     ),
-                    const SizedBox(width: 24),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── Form Row 3: Add PIC ─────────────────────────────────
+                Row(
+                  children: [
                     Expanded(
-                      child: _buildDropdown(
+                      child: _buildMultiSelectDropdown(
                         label: 'Add PIC',
                         optionalLabel: ' (Optional)',
                         isRequired: false,
-                        hint: 'Select PIC',
-                        value: _selectedPic,
+                        hint: 'Select PICs',
+                        values: _selectedPics,
                         items: _pics.map((p) {
                           final username = p['username'] as String;
                           final fullName = p['full_name'] as String? ?? username;
@@ -245,9 +390,11 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
                             child: Text(fullName),
                           );
                         }).toList(),
-                        onChanged: (val) => setState(() => _selectedPic = val),
+                        onChanged: (val) => setState(() => _selectedPics = val),
                       ),
                     ),
+                    const SizedBox(width: 24),
+                    const Expanded(child: SizedBox()),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -274,65 +421,99 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  height: 140,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.divider),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: _imageFile == null 
-                   ? Center(
-                      child: ElevatedButton.icon(
-                        onPressed: _takePhoto,
-                        icon: const Icon(Icons.camera_alt_outlined, size: 18),
-                        label: const Text(
-                          'Take Photos',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                _imageFile == null 
+                 ? Container(
+                    height: 110,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.divider),
+                    ),
+                    alignment: Alignment.center,
+                    child: ElevatedButton.icon(
+                      onPressed: _takePhoto,
+                      icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                      label: const Text(
+                        'Take Photos',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.green,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: const StadiumBorder(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                    ),
+                  )
+                 : Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Image Preview
+                      Container(
+                        width: 180,
+                        height: 110,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.divider),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.green,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
+                        clipBehavior: Clip.antiAlias,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: Image.network(
+                                _imageFile!.path,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: GestureDetector(
+                                  onTap: _showZoomedImage,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.crop_free_rounded,
+                                      size: 16,
+                                      color: Color(0xFF10B981),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Retake Button
+                      OutlinedButton.icon(
+                        onPressed: _takePhoto,
+                        icon: const Icon(Icons.reply_rounded, size: 16, color: Color(0xFF10B981)),
+                        label: const Text(
+                          'Retake',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600, 
+                            fontSize: 13,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF10B981),
+                          side: const BorderSide(color: Color(0xFF10B981)),
                           shape: const StadiumBorder(),
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         ),
                       ),
-                    )
-                   : Stack(
-                     alignment: Alignment.center,
-                     children: [
-                       // Image Preview
-                       Positioned.fill(
-                         child: Image.network(
-                           _imageFile!.path, // Support rendering web blob
-                           fit: BoxFit.cover,
-                         ),
-                       ),
-                       Positioned.fill(
-                         child: Container(color: Colors.black.withValues(alpha: 0.15)),
-                       ),
-                       // Change / Retake Photo Button
-                       ElevatedButton.icon(
-                         onPressed: _removePhoto,
-                         icon: const Icon(Icons.delete_outline, size: 16),
-                         label: const Text(
-                           'Remove Photo',
-                           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                         ),
-                         style: ElevatedButton.styleFrom(
-                           backgroundColor: AppColors.error,
-                           foregroundColor: Colors.white,
-                           elevation: 0,
-                           shape: const StadiumBorder(),
-                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                         ),
-                       ),
-                     ]
-                   ),
-                ),
+                    ],
+                  ),
                 const SizedBox(height: 32),
 
                 // ── Action Buttons ──────────────────────────────────────────────
@@ -395,9 +576,23 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
     required String hint,
     required String? value,
     required List<DropdownMenuItem<String>> items,
-    required ValueChanged<String?> onChanged,
+    required ValueChanged<String?>? onChanged,
     String? optionalLabel,
   }) {
+    // Map item values to labels for searching and display
+    final Map<String, String> valueToLabel = {};
+    for (var item in items) {
+      if (item.value != null) {
+        String labelText = '';
+        if (item.child is Text) {
+          labelText = (item.child as Text).data ?? '';
+        }
+        valueToLabel[item.value!] = labelText;
+      }
+    }
+
+    final bool isSearchEnabled = label != 'Shift';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -433,35 +628,214 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
           ],
         ),
         const SizedBox(height: 8),
-        // Dropdown Form Field
-        DropdownButtonFormField<String>(
-          value: value,
-          hint: Text(hint, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              borderSide: const BorderSide(color: AppColors.divider),
+        DropdownSearch<String>(
+          key: ValueKey('${label}_${value ?? 'null'}_${items.length}'),
+          items: (filter, loadProps) => valueToLabel.keys.toList(),
+          selectedItem: value,
+          enabled: onChanged != null && items.isNotEmpty,
+          onSelected: onChanged,
+          itemAsString: (String? val) {
+            if (val == null) return '';
+            return valueToLabel[val] ?? val;
+          },
+          popupProps: PopupProps.menu(
+            showSearchBox: isSearchEnabled,
+            menuProps: const MenuProps(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+                side: BorderSide(color: AppColors.divider),
+              ),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              borderSide: const BorderSide(color: AppColors.divider),
+            searchFieldProps: TextFieldProps(
+              autofocus: true,
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Search $label...',
+                hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  borderSide: const BorderSide(color: AppColors.divider),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  borderSide: const BorderSide(color: AppColors.divider),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  borderSide: const BorderSide(color: AppColors.green, width: 1.5),
+                ),
+              ),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              borderSide: const BorderSide(color: AppColors.green, width: 1.5),
-            ),
+            containerBuilder: (context, child) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: child,
+              );
+            },
           ),
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: AppColors.textPrimary,
-            size: 20,
+          decoratorProps: DropDownDecoratorProps(
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              hintText: hint,
+              hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                borderSide: const BorderSide(color: AppColors.divider),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                borderSide: const BorderSide(color: AppColors.divider),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                borderSide: const BorderSide(color: AppColors.green, width: 1.5),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                borderSide: const BorderSide(color: AppColors.divider),
+              ),
+            ),
+            baseStyle: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
           ),
-          items: items,
-          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMultiSelectDropdown({
+    required String label,
+    required bool isRequired,
+    required String hint,
+    required List<String> values,
+    required List<DropdownMenuItem<String>> items,
+    required ValueChanged<List<String>> onChanged,
+    String? optionalLabel,
+  }) {
+    // Map item values to labels for searching and display
+    final Map<String, String> valueToLabel = {};
+    for (var item in items) {
+      if (item.value != null) {
+        String labelText = '';
+        if (item.child is Text) {
+          labelText = (item.child as Text).data ?? '';
+        }
+        valueToLabel[item.value!] = labelText;
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Label Text
+        Row(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            if (optionalLabel != null)
+              Text(
+                optionalLabel,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            if (isRequired)
+              const Text(
+                ' *',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.error,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        DropdownSearch<String>.multiSelection(
+          key: ValueKey('${label}_${values.join(",")}_${items.length}'),
+          items: (filter, loadProps) => valueToLabel.keys.toList(),
+          selectedItems: values,
+          onSelected: onChanged,
+          itemAsString: (String? val) {
+            if (val == null) return '';
+            return valueToLabel[val] ?? val;
+          },
+          popupProps: MultiSelectionPopupProps.menu(
+            showSearchBox: true,
+            menuProps: const MenuProps(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+                side: BorderSide(color: AppColors.divider),
+              ),
+            ),
+            searchFieldProps: TextFieldProps(
+              autofocus: true,
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Search $label...',
+                hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  borderSide: const BorderSide(color: AppColors.divider),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  borderSide: const BorderSide(color: AppColors.divider),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  borderSide: const BorderSide(color: AppColors.green, width: 1.5),
+                ),
+              ),
+            ),
+            containerBuilder: (context, child) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: child,
+              );
+            },
+          ),
+          decoratorProps: DropDownDecoratorProps(
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              hintText: hint,
+              hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                borderSide: const BorderSide(color: AppColors.divider),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                borderSide: const BorderSide(color: AppColors.divider),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                borderSide: const BorderSide(color: AppColors.green, width: 1.5),
+              ),
+            ),
+            baseStyle: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+          ),
         ),
       ],
     );

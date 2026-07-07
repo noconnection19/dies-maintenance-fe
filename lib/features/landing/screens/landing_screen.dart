@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/session/session_store.dart';
 
 /// Model data untuk tiap pilihan modul.
 class _AppModule {
@@ -108,12 +109,23 @@ class LandingScreen extends StatelessWidget {
                         child: _ModuleCard(
                           module: module,
                           onTap: () {
-                            if (module.name == 'Dies Maintenance') {
-                              AppRouter.goToDashboard(context);
-                            } else if (module.name == 'Dies Maintenance Report') {
-                              AppRouter.goToReportDashboard(context);
-                            } else if (module.name == 'Inventory Management') {
-                              AppRouter.goToInventory(context);
+                            final user = SessionStore.instance.currentUser;
+                            final role = user?.role;
+                            
+                            // Admin & Supervisor have full access. Member only access Dies Maintenance.
+                            final bool hasAccess = (role == 'Admin' || role == 'Supervisor') ||
+                                                   (role == 'Member' && module.name == 'Dies Maintenance');
+                            
+                            if (hasAccess) {
+                              if (module.name == 'Dies Maintenance') {
+                                AppRouter.goToDashboard(context);
+                              } else if (module.name == 'Dies Maintenance Report') {
+                                AppRouter.goToReportDashboard(context);
+                              } else if (module.name == 'Inventory Management') {
+                                AppRouter.goToInventory(context);
+                              }
+                            } else {
+                              _showAccessDeniedDialog(context, module.name);
                             }
                           },
                         ),
@@ -123,6 +135,45 @@ class LandingScreen extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAccessDeniedDialog(BuildContext context, String moduleName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            const SizedBox(width: 12),
+            const Text(
+              'Access Denied',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+          ],
+        ),
+        content: Text(
+          'You do not have permission to access the "$moduleName" module. Please contact your supervisor if you require access.',
+          style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.green,
+              foregroundColor: Colors.white,
+              shape: const StadiumBorder(),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),

@@ -9,6 +9,7 @@ class DiesMaintenanceApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: AppRouter.navigatorKey,
       title: 'Dies Maintenance',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

@@ -5,6 +5,7 @@ import '../../../core/router/app_router.dart';
 import '../../auth/data/auth_service.dart';
 import '../widgets/maintenance_card.dart';
 import '../widgets/activity_report_panel.dart';
+import '../data/line_stop_service.dart';
 
 /// Dashboard screen — hanya berisi konten, shell dihandle oleh [AppShell].
 class HomeScreen extends StatelessWidget {
@@ -54,8 +55,34 @@ class _DashboardContent extends StatelessWidget {
 }
 
 // ─── Grid Menu ─────────────────────────────────────────────────────
-class _GridMenu extends StatelessWidget {
+class _GridMenu extends StatefulWidget {
   const _GridMenu();
+
+  @override
+  State<_GridMenu> createState() => _GridMenuState();
+}
+
+class _GridMenuState extends State<_GridMenu> {
+  int _lineStopCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCounts();
+  }
+
+  Future<void> _fetchCounts() async {
+    try {
+      final res = await LineStopService.getPaginated(page: 1, size: 1, status: 'ON_PROGRESS');
+      if (mounted) {
+        setState(() {
+          _lineStopCount = res['total'] as int;
+        });
+      }
+    } catch (e) {
+      // Silently handle error
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +93,7 @@ class _GridMenu extends StatelessWidget {
             Expanded(
               child: MaintenanceCard(
                 title: 'Dies Line Stop',
-                taskCount: 10,
+                taskCount: _lineStopCount,
                 accentColor: AppColors.lineStop,
                 onTap: () => AppRouter.goToLineStop(context),
               ),
@@ -75,7 +102,7 @@ class _GridMenu extends StatelessWidget {
             const Expanded(
               child: MaintenanceCard(
                 title: 'Dies Repair',
-                taskCount: 10,
+                taskCount: 0,
                 accentColor: AppColors.repair,
               ),
             ),
@@ -92,13 +119,8 @@ class _GridMenu extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 24),
-            Expanded(
-              child: MaintenanceCard(
-                title: 'Maintenance Dashboard',
-                taskCount: 0,
-                accentColor: Colors.blueAccent,
-                onTap: () => AppRouter.goToMaintenanceDashboard(context),
-              ),
+            const Expanded(
+              child: SizedBox(),
             ),
           ],
         ),

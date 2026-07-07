@@ -11,11 +11,11 @@ import 'package:intl/intl.dart';
 class DateFormatter {
   DateFormatter._();
 
-  static final _display  = DateFormat('dd MMM yyyy HH:mm', 'id_ID');
-  static final _short    = DateFormat('dd/MM/yyyy', 'id_ID');
-  static final _timeOnly = DateFormat('HH:mm', 'id_ID');
-  static final _full     = DateFormat('EEEE, dd MMMM yyyy', 'id_ID');
-  static final _iso      = DateFormat("yyyy-MM-dd'T'HH:mm:ss");
+  static late final _display  = DateFormat('dd MMM yyyy, HH:mm');
+  static late final _short    = DateFormat('dd/MM/yyyy');
+  static late final _timeOnly = DateFormat('HH:mm');
+  static late final _full     = DateFormat('EEEE, dd MMMM yyyy');
+  static late final _iso      = DateFormat("yyyy-MM-dd'T'HH:mm:ss");
 
   /// "20 Apr 2026 08:15"
   static String display(String? isoString) {
@@ -58,9 +58,15 @@ class DateFormatter {
   static DateTime? _parse(String? value) {
     if (value == null || value.isEmpty) return null;
     try {
-      return DateTime.parse(value).toLocal();
+      final cleanStr = value.replaceAll(' ', 'T');
+      final utcStr = cleanStr.endsWith('Z') ? cleanStr : '${cleanStr}Z';
+      return DateTime.parse(utcStr).toLocal();
     } catch (_) {
-      return null;
+      try {
+        return DateTime.parse(value).toLocal();
+      } catch (_) {
+        return null;
+      }
     }
   }
 }

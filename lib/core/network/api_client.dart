@@ -3,6 +3,9 @@ import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../session/session_store.dart';
 import 'api_exception.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../router/app_router.dart';
+import 'package:http_parser/http_parser.dart';
 
 /// HTTP client bersama untuk seluruh aplikasi.
 ///
@@ -53,7 +56,7 @@ class ApiClient {
   /// HTTP POST
   static Future<dynamic> post(
     String endpoint, {
-    Map<String, dynamic>? body,
+    dynamic body,
   }) async {
     final response = await http.post(
       _uri(endpoint),
@@ -66,7 +69,7 @@ class ApiClient {
   /// HTTP PUT (replace seluruh resource)
   static Future<dynamic> put(
     String endpoint, {
-    Map<String, dynamic>? body,
+    dynamic body,
   }) async {
     final response = await http.put(
       _uri(endpoint),
@@ -95,6 +98,43 @@ class ApiClient {
     return _handleResponse(response);
   }
 
+  /// HTTP POST Multipart for File Upload
+  static Future<dynamic> upload(
+    String endpoint, {
+    required List<int> bytes,
+    required String filename,
+    required String mimeType,
+  }) async {
+    final request = http.MultipartRequest('POST', _uri(endpoint));
+    
+    // Auth token
+    final token = SessionStore.instance.token;
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    
+    // Parse contentType
+    MediaType? contentType;
+    try {
+      contentType = MediaType.parse(mimeType);
+    } catch (_) {
+      // ignore
+    }
+
+    final multipartFile = http.MultipartFile.fromBytes(
+      'file',
+      bytes,
+      filename: filename,
+      contentType: contentType,
+    );
+    
+    request.files.add(multipartFile);
+    
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    return _handleResponse(response);
+  }
+
   // ── Response handler ─────────────────────────────────────────────
 
   /// Parse response:
@@ -117,6 +157,15 @@ class ApiClient {
       message = (body['detail'] ?? body['message'] ?? message).toString();
     } catch (_) {
       // body bukan JSON, pakai message default
+    }
+
+    if (statusCode == 401) {
+      SessionStore.instance.clearSession();
+      SharedPreferences.getInstance().then((prefs) => prefs.remove('user_session'));
+      AppRouter.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        AppRoutes.landing,
+        (_) => false,
+      );
     }
 
     throw ApiException(statusCode: statusCode, message: message);

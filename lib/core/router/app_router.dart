@@ -8,6 +8,7 @@ import '../../features/dashboard/screens/maintenance_dashboard_screen.dart';
 import '../../features/line_stop/screens/line_stop_screen.dart';
 import '../../features/report_dashboard/screens/line_stop_monitoring_dashboard_screen.dart';
 import '../../features/inventory/screens/inventory_screen.dart';
+import '../../features/dashboard/data/line_stop_service.dart';
 
 /// Nama-nama route yang digunakan di seluruh aplikasi.
 class AppRoutes {
@@ -26,6 +27,8 @@ class AppRoutes {
 /// Router aplikasi: mengelola navigasi dan auth guard.
 class AppRouter {
   AppRouter._();
+
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   /// Route map yang didaftarkan ke [MaterialApp].
   static Map<String, WidgetBuilder> get routes => {
@@ -59,7 +62,11 @@ class AppRouter {
         AppRoutes.inventory: (context) {
           final user = SessionStore.instance.currentUser;
           if (user == null) return const LoginScreen();
-          return const InventoryHomeScreen();
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          return InventoryHomeScreen(
+            taskId: args?['taskId'] as String?,
+            editOrder: args?['editOrder'] as PartOrder?,
+          );
         },
       };
 
@@ -92,8 +99,14 @@ class AppRouter {
   }
 
   /// Navigasi ke Homepage Inventory Management.
-  static void goToInventory(BuildContext context) {
-    Navigator.of(context).pushNamed(AppRoutes.inventory);
+  static void goToInventory(BuildContext context, {String? taskId, PartOrder? editOrder}) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.inventory,
+      arguments: {
+        'taskId': taskId,
+        'editOrder': editOrder,
+      },
+    );
   }
 
   /// Navigasi ke Line Stop Screen.
