@@ -512,9 +512,9 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
                 _buildTableHeader("Problem", "Occ", "%"),
                 const Divider(),
                 ...breakdown.map((item) => _buildBreakdownRow(
-                  name: item['problem'],
-                  occ: (item['occ'] as num).toInt(),
-                  pct: (item['percentage'] as num).toDouble(),
+                  name: item['problem'] ?? item['Problem'] ?? 'Unknown',
+                  occ: ((item['occ'] ?? item['Occ'] ?? 0) as num).toInt(),
+                  pct: ((item['percentage'] ?? item['presentase'] ?? item['PERSENTASE'] ?? 0.0) as num).toDouble(),
                 )),
               ],
             ),

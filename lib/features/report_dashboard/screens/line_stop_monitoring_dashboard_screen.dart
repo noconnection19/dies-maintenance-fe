@@ -34,6 +34,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
   double _bestMonthValue = 0;
   String _worstMonthName = '-';
   double _worstMonthValue = 0;
+  List<Map<String, dynamic>> _breakdownCategories = [];
 
   @override
   void initState() {
@@ -77,6 +78,11 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
           _worstMonthValue = (response['data']['worst_month_value'] as num? ?? 0).toDouble();
           if (lineDetails != null) {
             _lineDetails = Map<String, dynamic>.from(lineDetails);
+          }
+          if (response['data']['breakdown_categories'] != null) {
+            _breakdownCategories = List<Map<String, dynamic>>.from(response['data']['breakdown_categories']);
+          } else {
+            _breakdownCategories = [];
           }
         });
       }
@@ -843,15 +849,12 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
   }
 
   Widget _buildBreakdownProblemContent() {
-    final data = [
-      {'problem': 'Dies Scratch', 'occ': 45, 'percent': 85},
-      {'problem': 'Dies Crack', 'occ': 30, 'percent': 60},
-      {'problem': 'Sensor Error', 'occ': 25, 'percent': 50},
-      {'problem': 'Misfeed', 'occ': 20, 'percent': 40},
-      {'problem': 'Ejector Stuck', 'occ': 15, 'percent': 30},
-      {'problem': 'Slug Mark', 'occ': 10, 'percent': 20},
-      {'problem': 'Spring Broken', 'occ': 5, 'percent': 10},
-    ];
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_breakdownCategories.isEmpty) {
+      return const Center(child: Text('No data found', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)));
+    }
 
     return Column(
       children: [
@@ -865,11 +868,13 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
         const SizedBox(height: 8),
         Expanded(
           child: ListView.separated(
-            itemCount: data.length,
+            itemCount: _breakdownCategories.length,
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              final item = data[index];
-              final percent = item['percent'] as int;
+              final item = _breakdownCategories[index];
+              final problemName = item['problem'] ?? item['Problem'] ?? 'Unknown';
+              final occ = ((item['occ'] ?? item['Occ'] ?? 0) as num).toInt();
+              final percent = ((item['percentage'] ?? item['presentase'] ?? item['PERSENTASE'] ?? 0.0) as num).toDouble();
               return Row(
                 children: [
                   Expanded(
@@ -877,12 +882,12 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item['problem'] as String, style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+                        Text(problemName as String, style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 4),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(3),
                           child: LinearProgressIndicator(
-                            value: percent / 100,
+                            value: percent / 100.0,
                             backgroundColor: Colors.grey.shade200,
                             color: AppColors.green,
                             minHeight: 6,
@@ -893,11 +898,11 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                   ),
                   Expanded(
                     flex: 1,
-                    child: Text('${item['occ']}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.green, fontWeight: FontWeight.w600)),
+                    child: Text('$occ', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.green, fontWeight: FontWeight.w600)),
                   ),
                   Expanded(
                     flex: 1,
-                    child: Text('$percent%', textAlign: TextAlign.right, style: const TextStyle(fontSize: 12, color: AppColors.green, fontWeight: FontWeight.w600)),
+                    child: Text('${percent.toInt()}%', textAlign: TextAlign.right, style: const TextStyle(fontSize: 12, color: AppColors.green, fontWeight: FontWeight.w600)),
                   ),
                 ],
               );
