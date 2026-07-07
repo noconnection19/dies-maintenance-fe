@@ -1,10 +1,92 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:month_picker_dialog/month_picker_dialog.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/app_shell.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/api_constants.dart';
 
-class LineStopMonitoringDashboardScreen extends StatelessWidget {
+class LineStopMonitoringDashboardScreen extends StatefulWidget {
   const LineStopMonitoringDashboardScreen({super.key});
+
+  @override
+  State<LineStopMonitoringDashboardScreen> createState() => _LineStopMonitoringDashboardScreenState();
+}
+
+class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDashboardScreen> {
+  late DateTime _fromDate;
+  late DateTime _toDate;
+  
+  bool _isLoading = false;
+  double _ppmCurrent = 0;
+  double _avgPpm = 0;
+  int _incidentOcc = 0;
+  String _worstLineName = '-';
+  double _worstLinePpm = 0;
+  double _worstLineTarget = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _toDate = DateTime(now.year, now.month);
+    _fromDate = DateTime(now.year, now.month - 5);
+    _fetchDashboardData();
+  }
+
+  Future<void> _fetchDashboardData() async {
+    setState(() => _isLoading = true);
+    try {
+      final startDateStr = DateFormat('yyyy-MM-dd').format(DateTime(_fromDate.year, _fromDate.month, 1));
+      final lastDayOfMonth = DateTime(_toDate.year, _toDate.month + 1, 0);
+      final endDateStr = DateFormat('yyyy-MM-dd').format(lastDayOfMonth);
+      
+      final response = await ApiClient.get(
+        ApiConstants.dashboardMonitoring,
+        queryParams: {
+          'start_date': startDateStr,
+          'end_date': endDateStr,
+        },
+      );
+      
+      if (response != null && response['data'] != null && response['data']['kpi'] != null) {
+        final kpi = response['data']['kpi'];
+        setState(() {
+          _ppmCurrent = (kpi['ppm_current'] as num).toDouble();
+          _avgPpm = (kpi['avg_ppm'] as num).toDouble();
+          _incidentOcc = (kpi['incident_occ'] as num).toInt();
+          _worstLineName = kpi['worst_line_name'] as String? ?? '-';
+          _worstLinePpm = (kpi['worst_line_ppm'] as num).toDouble();
+          _worstLineTarget = (kpi['worst_line_target'] as num).toDouble();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching dashboard data: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _showMonthYearRangePicker() async {
+    final result = await showDialog<Map<String, DateTime>>(
+      context: context,
+      builder: (context) => _MonthYearRangePickerDialog(
+        initialFromDate: _fromDate,
+        initialToDate: _toDate,
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _fromDate = result['from']!;
+        _toDate = result['to']!;
+      });
+      _fetchDashboardData();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +136,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildHeader() {
+    final dateLabel = '${DateFormat('MMM yy').format(_fromDate)} - ${DateFormat('MMM yy').format(_toDate)}';
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -67,7 +150,7 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
         ),
         Row(
           children: [
-            _buildFilterButton('Date', Icons.calendar_today),
+            _buildFilterButton(dateLabel, Icons.calendar_today, onTap: _showMonthYearRangePicker),
             const SizedBox(width: 12),
             _buildFilterButton('Line', Icons.precision_manufacturing),
             const SizedBox(width: 12),
@@ -78,53 +161,62 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterButton(String label, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+  Widget _buildFilterButton(String label, IconData icon, {VoidCallback? onTap}) {
+    return MouseRegion(
+      cursor: onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppColors.textSecondary),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: AppColors.textSecondary),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+            ],
           ),
-          const SizedBox(width: 8),
-          const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildStatCards() {
+    int monthsDiff = (_toDate.year - _fromDate.year) * 12 + _toDate.month - _fromDate.month + 1;
+    int targetPpm = 1721 * monthsDiff;
+
     return SizedBox(
       height: 100,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: _buildSingleStatCard('PPM vs Target - Current Month', '2000/2700', 'PPM', '2% vs Last Month')),
+          Expanded(child: _buildSingleStatCard('PPM vs Target', _isLoading ? '...' : '${_ppmCurrent.toInt()} / $targetPpm', 'PPM', '2% vs Last Month')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('AVG PPM', '2350', 'PPM', '1.5% vs Last Month')),
+          Expanded(child: _buildSingleStatCard('AVG PPM', _isLoading ? '...' : '${_avgPpm.toInt()}', 'PPM', '1.5% vs Last Month')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('Incident Line Stop - Current Month', '15', 'Incidents', '3% vs Last Month')),
+          Expanded(child: _buildSingleStatCard('Incident Line Stop - Current Month', _isLoading ? '...' : '$_incidentOcc', 'Incidents', '3% vs Last Month')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('Worst Line - Current month', 'Line A', '', '1 Rank vs Last Month')),
+          Expanded(child: _buildSingleStatCard('Worst Line - Current month', _isLoading ? '...' : '$_worstLineName / ${_worstLinePpm.toInt()} / ${_worstLineTarget.toInt()}', 'PPM', '1 Rank vs Last Month')),
         ],
       ),
     );
@@ -967,6 +1059,131 @@ class LineStopMonitoringDashboardScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MonthYearRangePickerDialog extends StatefulWidget {
+  final DateTime initialFromDate;
+  final DateTime initialToDate;
+
+  const _MonthYearRangePickerDialog({
+    required this.initialFromDate,
+    required this.initialToDate,
+  });
+
+  @override
+  State<_MonthYearRangePickerDialog> createState() => _MonthYearRangePickerDialogState();
+}
+
+class _MonthYearRangePickerDialogState extends State<_MonthYearRangePickerDialog> {
+  late DateTime fromDate;
+  late DateTime toDate;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    fromDate = widget.initialFromDate;
+    toDate = widget.initialToDate;
+  }
+
+  void _validate() {
+    final fromDateNorm = DateTime(fromDate.year, fromDate.month);
+    final toDateNorm = DateTime(toDate.year, toDate.month);
+
+    if (fromDateNorm.isAfter(toDateNorm)) {
+      setState(() => errorMessage = '"From" month cannot be after "To" month.');
+      return;
+    }
+    
+    int monthsDiff = (toDateNorm.year - fromDateNorm.year) * 12 + toDateNorm.month - fromDateNorm.month;
+    if (monthsDiff >= 12) {
+      setState(() => errorMessage = 'Maximum range is 12 months.');
+      return;
+    }
+    
+    setState(() => errorMessage = null);
+  }
+
+  Future<void> _pickMonth(bool isFrom) async {
+    final initialDate = isFrom ? fromDate : toDate;
+    final selectedDate = await showMonthPicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (selectedDate != null) {
+      setState(() {
+        if (isFrom) {
+          fromDate = selectedDate;
+        } else {
+          toDate = selectedDate;
+        }
+      });
+      _validate();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Select Month/Year Range'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildDateSelector('From', fromDate, () => _pickMonth(true)),
+          const SizedBox(height: 16),
+          _buildDateSelector('To', toDate, () => _pickMonth(false)),
+          if (errorMessage != null) ...[
+            const SizedBox(height: 16),
+            Text(errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+          ]
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('CANCEL'),
+        ),
+        ElevatedButton(
+          onPressed: errorMessage == null 
+            ? () => Navigator.pop(context, {'from': fromDate, 'to': toDate})
+            : null,
+          child: const Text('APPLY'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateSelector(String label, DateTime date, VoidCallback onTap) {
+    return Row(
+      children: [
+        SizedBox(width: 50, child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.w600))),
+        Expanded(
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(DateFormat('MMMM yyyy').format(date)),
+                  const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
