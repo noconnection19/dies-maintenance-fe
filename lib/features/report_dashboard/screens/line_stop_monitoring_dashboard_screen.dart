@@ -258,13 +258,13 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: _buildSingleStatCard('PPM vs Target', _isLoading ? '...' : '${_ppmCurrent.toInt()} / $targetPpm', 'PPM', '')),
+          Expanded(child: _buildSingleStatCard('PPM vs Target - by Range Date', _isLoading ? '...' : '${_ppmCurrent.toInt()} / $targetPpm', 'PPM', '')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('AVG PPM', _isLoading ? '...' : '${_avgPpm.toInt()}', 'PPM', '')),
+          Expanded(child: _buildSingleStatCard('AVG PPM - by Range Date', _isLoading ? '...' : '${_avgPpm.toInt()}', 'PPM', '')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('Incident Line Stop - Current Month', _isLoading ? '...' : '$_incidentOcc', 'Incidents', '')),
+          Expanded(child: _buildSingleStatCard('Incident Line Stop - by Range Date', _isLoading ? '...' : '$_incidentOcc', 'Incidents', '')),
           const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('Worst Line - Current month', _isLoading ? '...' : '$_worstLineName / ${_worstLineTarget.toInt()}', 'PPM', '')),
+          Expanded(child: _buildSingleStatCard('Worst Line - by Range Date', _isLoading ? '...' : '$_worstLineName / ${_worstLineTarget.toInt()}', 'PPM', '')),
         ],
       ),
     );
@@ -929,7 +929,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
         const SizedBox(width: 24),
         Expanded(child: _buildLargeDetailCard('Trend Occurence per LINE', child: _buildTrendOccurenceContent())),
         const SizedBox(width: 24),
-        Expanded(child: _buildLargeDetailCard('Improvement PPM per Dies - Top 5', child: _buildImprovementContent())),
+        Expanded(child: _buildLargeDetailCard('PPM per Problem - Top 5', child: _buildImprovementContent())),
       ],
     );
   }
