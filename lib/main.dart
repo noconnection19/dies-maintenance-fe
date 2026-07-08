@@ -9,6 +9,11 @@ import 'features/auth/data/auth_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
+
   try {
     final prefs = await SharedPreferences.getInstance();
     final sessionStr = prefs.getString('user_session');

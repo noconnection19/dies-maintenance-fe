@@ -231,10 +231,11 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
           Container(
             width: 680,
             padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 // ── Header: Title & Close Button ─────────────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -555,6 +556,7 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
                 ),
               ],
             ),
+          ),
           ),
           if (_isSubmitting)
             const Positioned.fill(
