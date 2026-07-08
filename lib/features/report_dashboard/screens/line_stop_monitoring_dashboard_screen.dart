@@ -139,46 +139,69 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
   @override
   Widget build(BuildContext context) {
     return AppShell(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header Row
-          _buildHeader(),
-          const SizedBox(height: 12),
+      contentPadding: EdgeInsets.zero,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final screenW = constraints.maxWidth;
+          final screenH = constraints.maxHeight;
 
-          // Stat Cards
-          _buildStatCards(),
-          const SizedBox(height: 12),
+          // Responsive padding
+          final hPad = (screenW * 0.025).clamp(16.0, 40.0);
+          final vPad = (screenH * 0.02).clamp(12.0, 24.0);
+          final gap = (screenH * 0.015).clamp(8.0, 16.0);
 
-          // Main Content Area (Chart + Cards)
-          Expanded(
-            flex: 1,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Left Column (2/3 width)
-                Expanded(
-                  flex: 2,
-                  child: _buildChartCard(),
-                ),
-                const SizedBox(width: 24),
-                // Right Column (1/3 width)
-                Expanded(
-                  flex: 1,
-                  child: _buildRightPanel(),
-                ),
-              ],
+          // Proportional section heights with minimums
+          final statH = (screenH * 0.12).clamp(80.0, 120.0);
+          final mainH = (screenH * 0.42).clamp(280.0, double.infinity);
+          final bottomH = (screenH * 0.38).clamp(260.0, double.infinity);
+
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header Row
+                  _buildHeader(),
+                  SizedBox(height: gap),
+
+                  // Stat Cards
+                  SizedBox(
+                    height: statH,
+                    child: _buildStatCardsContent(),
+                  ),
+                  SizedBox(height: gap),
+
+                  // Main Content Area (Chart + Cards)
+                  SizedBox(
+                    height: mainH,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: _buildChartCard(),
+                        ),
+                        SizedBox(width: gap * 1.5),
+                        Expanded(
+                          flex: 1,
+                          child: _buildRightPanel(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: gap),
+
+                  // Bottom Area (3 equal cards)
+                  SizedBox(
+                    height: bottomH,
+                    child: _buildBottomCards(),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          
-          // Bottom Area (3 equal cards)
-          Expanded(
-            flex: 1,
-            child: _buildBottomCards(),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -249,24 +272,22 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
     );
   }
 
-  Widget _buildStatCards() {
+  /// Stat cards content — parent provides height via SizedBox.
+  Widget _buildStatCardsContent() {
     int monthsDiff = (_toDate.year - _fromDate.year) * 12 + _toDate.month - _fromDate.month + 1;
     int targetPpm = 1721 * monthsDiff;
 
-    return SizedBox(
-      height: 100,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: _buildSingleStatCard('PPM vs Target - by Range Date', _isLoading ? '...' : '${_ppmCurrent.toInt()} / $targetPpm', 'PPM', '')),
-          const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('AVG PPM - by Range Date', _isLoading ? '...' : '${_avgPpm.toInt()}', 'PPM', '')),
-          const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('Incident Line Stop - by Range Date', _isLoading ? '...' : '$_incidentOcc', 'Incidents', '')),
-          const SizedBox(width: 16),
-          Expanded(child: _buildSingleStatCard('Worst Line - by Range Date', _isLoading ? '...' : '$_worstLineName / ${_worstLineTarget.toInt()}', 'PPM', '')),
-        ],
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: _buildSingleStatCard('PPM vs Target - by Range Date', _isLoading ? '...' : '${_ppmCurrent.toInt()} / $targetPpm', 'PPM', '')),
+        const SizedBox(width: 16),
+        Expanded(child: _buildSingleStatCard('AVG PPM - by Range Date', _isLoading ? '...' : '${_avgPpm.toInt()}', 'PPM', '')),
+        const SizedBox(width: 16),
+        Expanded(child: _buildSingleStatCard('Incident Line Stop - by Range Date', _isLoading ? '...' : '$_incidentOcc', 'Incidents', '')),
+        const SizedBox(width: 16),
+        Expanded(child: _buildSingleStatCard('Worst Line - by Range Date', _isLoading ? '...' : '$_worstLineName / ${_worstLineTarget.toInt()}', 'PPM', '')),
+      ],
     );
   }
 
@@ -387,7 +408,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
               color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -397,142 +418,151 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Builder(
-                        builder: (context) {
-                          double maxTotalPpm = 30.0;
-                          for (final data in _monthlyMonitoring) {
-                            final tandem = (data['tandem'] as num? ?? 0.0).toDouble();
-                            final blanking = (data['blanking'] as num? ?? 0.0).toDouble();
-                            final transver1 = (data['transver1'] as num? ?? 0.0).toDouble();
-                            final transver2 = (data['transver2'] as num? ?? 0.0).toDouble();
-                            final transver3 = (data['transver3'] as num? ?? 0.0).toDouble();
-                            final total = tandem + blanking + transver1 + transver2 + transver3;
-                            if (total > maxTotalPpm) {
-                              maxTotalPpm = total;
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, chartConstraints) {
+                            double maxTotalPpm = 30.0;
+                            for (final data in _monthlyMonitoring) {
+                              final tandem = (data['tandem'] as num? ?? 0.0).toDouble();
+                              final blanking = (data['blanking'] as num? ?? 0.0).toDouble();
+                              final transver1 = (data['transver1'] as num? ?? 0.0).toDouble();
+                              final transver2 = (data['transver2'] as num? ?? 0.0).toDouble();
+                              final transver3 = (data['transver3'] as num? ?? 0.0).toDouble();
+                              final total = tandem + blanking + transver1 + transver2 + transver3;
+                              if (total > maxTotalPpm) {
+                                maxTotalPpm = total;
+                              }
                             }
-                          }
-                          double chartMaxY = (maxTotalPpm * 1.15).ceilToDouble();
-                          if (chartMaxY < 2000.0) chartMaxY = 2000.0;
+                            double chartMaxY = (maxTotalPpm * 1.15).ceilToDouble();
+                            if (chartMaxY < 2000.0) chartMaxY = 2000.0;
 
-                          double gridInterval = 1000.0;
-                          if (chartMaxY <= 1000) {
-                            gridInterval = 200.0;
-                          }
+                            double gridInterval = 1000.0;
+                            if (chartMaxY <= 1000) {
+                              gridInterval = 200.0;
+                            }
 
+                            // Dynamic bar width based on chart area & number of bars
+                            final barCount = _monthlyMonitoring.length;
+                            final availableW = chartConstraints.maxWidth - 35; // minus left titles
+                            final dynamicRodWidth = barCount > 0
+                                ? (availableW / barCount * 0.55).clamp(16.0, 56.0)
+                                : 48.0;
 
-                          return Expanded(
-                            child: _isLoading
-                                ? const Center(child: CircularProgressIndicator())
-                                : _monthlyMonitoring.isEmpty
-                                    ? const Center(
-                                        child: Text(
-                                          'No data available',
-                                          style: TextStyle(color: AppColors.textSecondary),
-                                        ),
-                                      )
-                                    : BarChart(
-                                        BarChartData(
-                                          alignment: BarChartAlignment.spaceAround,
-                                          maxY: chartMaxY,
-                                          barTouchData: BarTouchData(enabled: false),
-                                          titlesData: FlTitlesData(
-                                            show: true,
-                                            bottomTitles: AxisTitles(
-                                              sideTitles: SideTitles(
-                                                showTitles: true,
-                                                getTitlesWidget: (value, meta) {
-                                                  const style = TextStyle(
-                                                    color: AppColors.textSecondary,
-                                                    fontWeight: FontWeight.w500,
-                                                    fontSize: 10,
-                                                  );
-                                                  int index = value.toInt() - 1;
-                                                  if (index >= 0 && index < _monthlyMonitoring.length) {
-                                                    String monthLabel = _monthlyMonitoring[index]['month'] ?? '';
-                                                    if (monthLabel.contains(' ')) {
-                                                      monthLabel = monthLabel.replaceFirst(' ', '\n');
-                                                    }
-                                                    return SideTitleWidget(
-                                                      axisSide: meta.axisSide,
-                                                      space: 8,
-                                                      child: Text(monthLabel, textAlign: TextAlign.center, style: style),
-                                                    );
-                                                  }
-                                                  return const SizedBox.shrink();
-                                                },
-                                                reservedSize: 40,
-                                                interval: 1,
-                                              ),
-                                            ),
-                                            leftTitles: AxisTitles(
-                                              sideTitles: SideTitles(
-                                                showTitles: true,
-                                                reservedSize: 35,
-                                                getTitlesWidget: (value, meta) {
-                                                  const style = TextStyle(
-                                                    color: AppColors.textSecondary,
-                                                    fontSize: 12,
-                                                  );
-                                                  final val = value.toInt();
-                                                  if (val == 0) {
-                                                    return const Text('0', style: style);
-                                                  }
-                                                  if (val % 1000 == 0) {
-                                                    return Text('${val ~/ 1000}K', style: style);
-                                                  }
-                                                  final label = val >= 1000
-                                                      ? '${(val / 1000).toStringAsFixed(1).replaceAll('.0', '')}K'
-                                                      : '$val';
-                                                  return Text(label, style: style);
-                                                },
-                                              ),
-                                            ),
-                                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                          ),
-                                          extraLinesData: ExtraLinesData(
-                                            horizontalLines: [
-                                              HorizontalLine(
-                                                y: 1721.0,
-                                                color: Colors.redAccent,
-                                                strokeWidth: 2,
-                                                dashArray: [6, 3],
-                                              ),
-                                            ],
-                                          ),
-                                          gridData: FlGridData(
-                                            show: true,
-                                            drawVerticalLine: false,
-                                            horizontalInterval: gridInterval,
-                                            getDrawingHorizontalLine: (value) => FlLine(
-                                              color: const Color(0xFFE2E8F0),
-                                              strokeWidth: 1,
-                                              dashArray: [4, 4],
-                                            ),
-                                          ),
-                                          borderData: FlBorderData(show: false),
-                                          barGroups: List.generate(_monthlyMonitoring.length, (index) {
-                                            final data = _monthlyMonitoring[index];
-                                            final tandem = (data['tandem'] as num? ?? 0.0).toDouble();
-                                            final blanking = (data['blanking'] as num? ?? 0.0).toDouble();
-                                            final transver1 = (data['transver1'] as num? ?? 0.0).toDouble();
-                                            final transver2 = (data['transver2'] as num? ?? 0.0).toDouble();
-                                            final transver3 = (data['transver3'] as num? ?? 0.0).toDouble();
-                                            return _buildBarGroup(
-                                              index + 1,
-                                              tandem,
-                                              blanking,
-                                              transver1,
-                                              transver2,
-                                              transver3,
-                                            );
-                                          }),
-                                        ),
-                                      ),
-                          );
-                        },
+                            if (_isLoading) {
+                              return const Center(child: CircularProgressIndicator());
+                            }
+                            if (_monthlyMonitoring.isEmpty) {
+                              return const Center(
+                                child: Text(
+                                  'No data available',
+                                  style: TextStyle(color: AppColors.textSecondary),
+                                ),
+                              );
+                            }
+                            return BarChart(
+                              BarChartData(
+                                alignment: BarChartAlignment.spaceAround,
+                                maxY: chartMaxY,
+                                barTouchData: BarTouchData(enabled: false),
+                                titlesData: FlTitlesData(
+                                  show: true,
+                                  bottomTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      getTitlesWidget: (value, meta) {
+                                        const style = TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 10,
+                                        );
+                                        int index = value.toInt() - 1;
+                                        if (index >= 0 && index < _monthlyMonitoring.length) {
+                                          String monthLabel = _monthlyMonitoring[index]['month'] ?? '';
+                                          if (monthLabel.contains(' ')) {
+                                            monthLabel = monthLabel.replaceFirst(' ', '\n');
+                                          }
+                                          return SideTitleWidget(
+                                            axisSide: meta.axisSide,
+                                            space: 8,
+                                            child: Text(monthLabel, textAlign: TextAlign.center, style: style),
+                                          );
+                                        }
+                                        return const SizedBox.shrink();
+                                      },
+                                      reservedSize: 40,
+                                      interval: 1,
+                                    ),
+                                  ),
+                                  leftTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      reservedSize: 35,
+                                      getTitlesWidget: (value, meta) {
+                                        const style = TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 12,
+                                        );
+                                        final val = value.toInt();
+                                        if (val == 0) {
+                                          return const Text('0', style: style);
+                                        }
+                                        if (val % 1000 == 0) {
+                                          return Text('${val ~/ 1000}K', style: style);
+                                        }
+                                        final label = val >= 1000
+                                            ? '${(val / 1000).toStringAsFixed(1).replaceAll('.0', '')}K'
+                                            : '$val';
+                                        return Text(label, style: style);
+                                      },
+                                    ),
+                                  ),
+                                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                ),
+                                extraLinesData: ExtraLinesData(
+                                  horizontalLines: [
+                                    HorizontalLine(
+                                      y: 1721.0,
+                                      color: Colors.redAccent,
+                                      strokeWidth: 2,
+                                      dashArray: [6, 3],
+                                    ),
+                                  ],
+                                ),
+                                gridData: FlGridData(
+                                  show: true,
+                                  drawVerticalLine: false,
+                                  horizontalInterval: gridInterval,
+                                  getDrawingHorizontalLine: (value) => FlLine(
+                                    color: const Color(0xFFE2E8F0),
+                                    strokeWidth: 1,
+                                    dashArray: [4, 4],
+                                  ),
+                                ),
+                                borderData: FlBorderData(show: false),
+                                barGroups: List.generate(_monthlyMonitoring.length, (index) {
+                                  final data = _monthlyMonitoring[index];
+                                  final tandem = (data['tandem'] as num? ?? 0.0).toDouble();
+                                  final blanking = (data['blanking'] as num? ?? 0.0).toDouble();
+                                  final transver1 = (data['transver1'] as num? ?? 0.0).toDouble();
+                                  final transver2 = (data['transver2'] as num? ?? 0.0).toDouble();
+                                  final transver3 = (data['transver3'] as num? ?? 0.0).toDouble();
+                                  return _buildBarGroup(
+                                    index + 1,
+                                    tandem,
+                                    blanking,
+                                    transver1,
+                                    transver2,
+                                    transver3,
+                                    rodWidth: dynamicRodWidth,
+                                  );
+                                }),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       _buildLegend(showTarget: true),
                     ],
                   ),
@@ -626,14 +656,14 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
     );
   }
 
-  BarChartGroupData _buildBarGroup(int x, double v1, double v2, double v3, double v4, double v5) {
+  BarChartGroupData _buildBarGroup(int x, double v1, double v2, double v3, double v4, double v5, {double rodWidth = 48}) {
     double total = v1 + v2 + v3 + v4 + v5;
     return BarChartGroupData(
       x: x,
       barRods: [
         BarChartRodData(
           toY: total,
-          width: 48,
+          width: rodWidth,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
           rodStackItems: [
             BarChartRodStackItem(0, v1, Colors.green.shade700),
