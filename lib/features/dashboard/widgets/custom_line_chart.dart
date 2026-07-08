@@ -92,9 +92,7 @@ class _LineChartPainter extends CustomPainter {
     final categories = {
       'blanking': Colors.orange,
       'tandem': const Color(0xFF10B981), // Emerald Green
-      'transver1': Colors.deepPurple,
-      'transver2': Colors.pinkAccent,
-      'transver3': Colors.blue,
+      'transver': Colors.deepPurple,
     };
 
     final int pointsCount = data.length;

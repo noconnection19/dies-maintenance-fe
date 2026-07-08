@@ -19,9 +19,7 @@ class CustomStackedBarChart extends StatelessWidget {
     double maxTotalVal = 3500.0;
     for (var item in data) {
       final total = ((item['tandem'] ?? 0) as num).toDouble() +
-                    ((item['transver1'] ?? 0) as num).toDouble() +
-                    ((item['transver2'] ?? 0) as num).toDouble() +
-                    ((item['transver3'] ?? 0) as num).toDouble();
+                    ((item['transver'] ?? 0) as num).toDouble();
       if (total > maxTotalVal) {
         maxTotalVal = total;
       }
@@ -95,31 +93,23 @@ class CustomStackedBarChart extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: data.map((item) {
                             final tandemVal = (item['tandem'] as num).toDouble();
-                            final tr1Val = (item['transver1'] as num).toDouble();
-                            final tr2Val = (item['transver2'] as num).toDouble();
-                            final tr3Val = (item['transver3'] as num).toDouble();
+                            final transverVal = (item['transver'] as num).toDouble();
 
                             // Hitung tinggi proporsional masing-masing segmen (PPM)
                             final hTandem = (tandemVal / maxY) * chartHeight;
-                            final hTr1 = (tr1Val / maxY) * chartHeight;
-                            final hTr2 = (tr2Val / maxY) * chartHeight;
-                            final hTr3 = (tr3Val / maxY) * chartHeight;
+                            final hTransver = (transverVal / maxY) * chartHeight;
 
                             return Tooltip(
                               message: '${item['month']}\n'
                                   'Tandem: ${tandemVal.toStringAsFixed(0)} PPM\n'
-                                  'TR 1: ${tr1Val.toStringAsFixed(0)} PPM\n'
-                                  'TR 2: ${tr2Val.toStringAsFixed(0)} PPM\n'
-                                  'TR 3: ${tr3Val.toStringAsFixed(0)} PPM\n'
+                                  'Transver: ${transverVal.toStringAsFixed(0)} PPM\n'
                                   'Overall: ${(item['overall_ppm'] as num).toStringAsFixed(0)} PPM',
                               child: SizedBox(
                                 width: barWidth.clamp(12.0, 30.0),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
-                                    if (hTr3 > 0) Container(height: hTr3, color: Colors.blue),
-                                    if (hTr2 > 0) Container(height: hTr2, color: Colors.pinkAccent),
-                                    if (hTr1 > 0) Container(height: hTr1, color: Colors.orangeAccent),
+                                    if (hTransver > 0) Container(height: hTransver, color: Colors.orangeAccent),
                                     if (hTandem > 0) Container(height: hTandem, color: const Color(0xFF10B981)), // Emerald Green
                                   ],
                                 ),

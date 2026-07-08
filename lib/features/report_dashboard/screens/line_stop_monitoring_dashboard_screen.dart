@@ -425,10 +425,8 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                             for (final data in _monthlyMonitoring) {
                               final tandem = (data['tandem'] as num? ?? 0.0).toDouble();
                               final blanking = (data['blanking'] as num? ?? 0.0).toDouble();
-                              final transver1 = (data['transver1'] as num? ?? 0.0).toDouble();
-                              final transver2 = (data['transver2'] as num? ?? 0.0).toDouble();
-                              final transver3 = (data['transver3'] as num? ?? 0.0).toDouble();
-                              final total = tandem + blanking + transver1 + transver2 + transver3;
+                              final transver = (data['transver'] as num? ?? 0.0).toDouble();
+                              final total = tandem + blanking + transver;
                               if (total > maxTotalPpm) {
                                 maxTotalPpm = total;
                               }
@@ -544,16 +542,12 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                                   final data = _monthlyMonitoring[index];
                                   final tandem = (data['tandem'] as num? ?? 0.0).toDouble();
                                   final blanking = (data['blanking'] as num? ?? 0.0).toDouble();
-                                  final transver1 = (data['transver1'] as num? ?? 0.0).toDouble();
-                                  final transver2 = (data['transver2'] as num? ?? 0.0).toDouble();
-                                  final transver3 = (data['transver3'] as num? ?? 0.0).toDouble();
+                                  final transver = (data['transver'] as num? ?? 0.0).toDouble();
                                   return _buildBarGroup(
                                     index + 1,
                                     tandem,
                                     blanking,
-                                    transver1,
-                                    transver2,
-                                    transver3,
+                                    transver,
                                     rodWidth: dynamicRodWidth,
                                   );
                                 }),
@@ -656,8 +650,8 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
     );
   }
 
-  BarChartGroupData _buildBarGroup(int x, double v1, double v2, double v3, double v4, double v5, {double rodWidth = 48}) {
-    double total = v1 + v2 + v3 + v4 + v5;
+  BarChartGroupData _buildBarGroup(int x, double tandem, double blanking, double transver, {double rodWidth = 48}) {
+    double total = tandem + blanking + transver;
     return BarChartGroupData(
       x: x,
       barRods: [
@@ -666,11 +660,9 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
           width: rodWidth,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
           rodStackItems: [
-            BarChartRodStackItem(0, v1, Colors.green.shade700),
-            BarChartRodStackItem(v1, v1 + v2, Colors.red.shade600),
-            BarChartRodStackItem(v1 + v2, v1 + v2 + v3, Colors.orange.shade600),
-            BarChartRodStackItem(v1 + v2 + v3, v1 + v2 + v3 + v4, Colors.purple.shade600),
-            BarChartRodStackItem(v1 + v2 + v3 + v4, total, Colors.blue.shade700),
+            BarChartRodStackItem(0, tandem, Colors.green.shade700),
+            BarChartRodStackItem(tandem, tandem + blanking, Colors.red.shade600),
+            BarChartRodStackItem(tandem + blanking, total, Colors.orange.shade600),
           ],
         ),
       ],
@@ -685,9 +677,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
       children: [
         _buildLegendItem('Tandem', Colors.green.shade700),
         _buildLegendItem('Blanking', Colors.red.shade600),
-        _buildLegendItem('Transfer 1', Colors.orange.shade600),
-        _buildLegendItem('Transfer 2', Colors.purple.shade600),
-        _buildLegendItem('Transfer 3', Colors.blue.shade700),
+        _buildLegendItem('Transfer', Colors.orange.shade600),
         if (showTarget)
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -915,7 +905,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: const Text(
-              'PPM Transver 1 - 3',
+              'PPM Transver',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -1041,10 +1031,8 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
     for (var item in _trendOccurrence) {
       double blanking = ((item['blanking'] ?? 0) as num).toDouble();
       double tandem = ((item['tandem'] ?? 0) as num).toDouble();
-      double tr1 = ((item['transver1'] ?? 0) as num).toDouble();
-      double tr2 = ((item['transver2'] ?? 0) as num).toDouble();
-      double tr3 = ((item['transver3'] ?? 0) as num).toDouble();
-      double m = [blanking, tandem, tr1, tr2, tr3].reduce((curr, next) => curr > next ? curr : next);
+      double transver = ((item['transver'] ?? 0) as num).toDouble();
+      double m = [blanking, tandem, transver].reduce((curr, next) => curr > next ? curr : next);
       if (m > calculatedMaxY) {
         calculatedMaxY = m;
       }
@@ -1054,9 +1042,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
 
     final tandemValues = _trendOccurrence.map((item) => ((item['tandem'] ?? 0) as num).toDouble()).toList();
     final blankingValues = _trendOccurrence.map((item) => ((item['blanking'] ?? 0) as num).toDouble()).toList();
-    final tr1Values = _trendOccurrence.map((item) => ((item['transver1'] ?? 0) as num).toDouble()).toList();
-    final tr2Values = _trendOccurrence.map((item) => ((item['transver2'] ?? 0) as num).toDouble()).toList();
-    final tr3Values = _trendOccurrence.map((item) => ((item['transver3'] ?? 0) as num).toDouble()).toList();
+    final transverValues = _trendOccurrence.map((item) => ((item['transver'] ?? 0) as num).toDouble()).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1129,9 +1115,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
               lineBarsData: [
                 _buildLineChartBarData(tandemValues, Colors.green.shade700),
                 _buildLineChartBarData(blankingValues, Colors.red.shade600),
-                _buildLineChartBarData(tr1Values, Colors.orange.shade600),
-                _buildLineChartBarData(tr2Values, Colors.purple.shade600),
-                _buildLineChartBarData(tr3Values, Colors.blue.shade700),
+                _buildLineChartBarData(transverValues, Colors.orange.shade600),
               ],
             ),
           ),

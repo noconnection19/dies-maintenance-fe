@@ -39,9 +39,7 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
     "All Line": null,
     "Blanking": "BL",
     "Tandem": "TD",
-    "Transver 1": "TR1",
-    "Transver 2": "TR2",
-    "Transver 3": "TR3",
+    "Transver": "TR",
   };
 
   // Shift mapping
@@ -408,7 +406,7 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
               ),
               const SizedBox(height: 8),
               _buildLineDetailCard(
-                title: "PPM Transver 1 - 3",
+                title: "PPM Transver",
                 value: "${(lineDetails['transver']['ppm'] as num).toInt()}  |  ${(lineDetails['transver']['hours'] as num).toInt()} Jam",
                 indicatorText: "▲ 2% vs last month",
                 borderColor: Colors.amber,
