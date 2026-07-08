@@ -29,7 +29,7 @@ class CustomStackedBarChart extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double chartWidth = constraints.maxWidth - 50; // Sisa untuk Y axis label
-        final double barWidth = (chartWidth / (data.isEmpty ? 1 : data.length)) * 0.5;
+        final double barWidth = (chartWidth / (data.isEmpty ? 1 : data.length)) * 0.35;
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,7 +105,7 @@ class CustomStackedBarChart extends StatelessWidget {
                                   'Transver: ${transverVal.toStringAsFixed(0)} PPM\n'
                                   'Overall: ${(item['overall_ppm'] as num).toStringAsFixed(0)} PPM',
                               child: SizedBox(
-                                width: barWidth.clamp(12.0, 30.0),
+                                width: barWidth.clamp(10.0, 20.0),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [

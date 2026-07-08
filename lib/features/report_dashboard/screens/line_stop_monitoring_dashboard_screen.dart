@@ -443,8 +443,8 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
                             final barCount = _monthlyMonitoring.length;
                             final availableW = chartConstraints.maxWidth - 35; // minus left titles
                             final dynamicRodWidth = barCount > 0
-                                ? (availableW / barCount * 0.55).clamp(16.0, 56.0)
-                                : 48.0;
+                                ? (availableW / barCount * 0.35).clamp(12.0, 24.0)
+                                : 20.0;
 
                             if (_isLoading) {
                               return const Center(child: CircularProgressIndicator());
