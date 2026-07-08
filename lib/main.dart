@@ -21,10 +21,10 @@ void main() async {
     debugPrint('Error loading saved session: $e');
   }
 
-  // Lock orientation to portrait only (untuk tablet)
+  // Lock orientation to landscape only (untuk tablet)
   await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
   ]);
 
   runApp(const DiesMaintenanceApp());
