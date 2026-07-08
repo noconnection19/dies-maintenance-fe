@@ -1199,23 +1199,29 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(problemName as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              const SizedBox(height: 4),
-              Text('$occ Occ', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-            ],
-          ),
           Text(
-            '$ppm PPM',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: diffColor,
+            problemName as String,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(
+              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontFamily: 'Inter'),
+              children: [
+                TextSpan(text: '$occ Occ | '),
+                TextSpan(
+                  text: '$ppm PPM',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: diffColor,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
