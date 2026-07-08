@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app/app.dart';
 import 'core/session/session_store.dart';
@@ -19,6 +20,12 @@ void main() async {
   } catch (e) {
     debugPrint('Error loading saved session: $e');
   }
+
+  // Lock orientation to portrait only (untuk tablet)
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   runApp(const DiesMaintenanceApp());
 }
