@@ -677,7 +677,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
       children: [
         _buildLegendItem('Tandem', Colors.green.shade700),
         _buildLegendItem('Blanking', Colors.red.shade600),
-        _buildLegendItem('Transfer', Colors.orange.shade600),
+        _buildLegendItem('Transver', Colors.orange.shade600),
         if (showTarget)
           Row(
             mainAxisSize: MainAxisSize.min,
