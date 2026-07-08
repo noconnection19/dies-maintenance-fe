@@ -165,7 +165,7 @@ class _LineStopScreenState extends State<LineStopScreen> {
                               if (mounted) {
                                 final didUpdate = await Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (context) => LineStopDetailScreen(task: result),
+                                    builder: (context) => LineStopDetailScreen(task: result, startPaused: false),
                                   ),
                                 );
                                 if (didUpdate == true) {

@@ -15,7 +15,8 @@ import '../../dashboard/data/line_stop_service.dart';
 
 class LineStopDetailScreen extends StatefulWidget {
   final DiesTask task;
-  const LineStopDetailScreen({super.key, required this.task});
+  final bool startPaused;
+  const LineStopDetailScreen({super.key, required this.task, this.startPaused = true});
 
   @override
   State<LineStopDetailScreen> createState() => _LineStopDetailScreenState();
@@ -27,7 +28,7 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
 
   // Timer states
   int _secondsRemaining = 900; // 15 Minutes default countdown
-  bool _isTimerRunning = true;
+  bool _isTimerRunning = false;
   Timer? _timer;
 
   // Form states
@@ -41,6 +42,7 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
   String? _selectedRepairedBy;
   final _repairedByCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
+  final _classificationCtrl = TextEditingController();
   String _changePartVal = 'No';
 
   // Options fetched from DB
@@ -60,6 +62,7 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
   void initState() {
     super.initState();
     _task = widget.task;
+    _isTimerRunning = !widget.startPaused;
 
     // Timer 15 menit mengambil hitung mundur dari created_dt
     if (_task.createdDt != null) {
@@ -162,10 +165,11 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
         }
 
         if (_task.classification != null) {
-          final matched = _classificationOptions.any((element) => element['system_value'] == _task.classification);
-          if (matched) {
-            _selectedClassification = _task.classification;
-          }
+          _classificationCtrl.text = _task.classification!;
+          // final matched = _classificationOptions.any((element) => element['system_value'] == _task.classification);
+          // if (matched) {
+          //   _selectedClassification = _task.classification;
+          // }
         }
         if (_task.rootcause != null) {
           final matched = _rootcauseOptions.any((element) => element['system_value'] == _task.rootcause);
@@ -229,6 +233,7 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
     _noteCtrl.dispose();
     _problemNameCtrl.dispose();
     _repairedByCtrl.dispose();
+    _classificationCtrl.dispose();
     super.dispose();
   }
 
@@ -262,7 +267,7 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
     // Validate required form fields
     if (_selectedProblemCd == null ||
         _problemNameCtrl.text.trim().isEmpty ||
-        _selectedClassification == null ||
+        _classificationCtrl.text.trim().isEmpty ||
         _selectedPenyebab == null ||
         _selectedPenanggulangan == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -532,19 +537,24 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
 
       final elapsedSeconds = 900 - _secondsRemaining;
       final elapsedMinutes = (elapsedSeconds > 0 ? elapsedSeconds : 0) ~/ 60;
+      final durationLsVal = elapsedMinutes > 0 ? elapsedMinutes : 14;
+      final picCount = (_task.picUsernames != null && _task.picUsernames!.isNotEmpty)
+          ? _task.picUsernames!.length
+          : 1;
+      final durationMhVal = durationLsVal * picCount;
 
       final payload = {
         'status': '3',  // Approved
         'problem_cd': _selectedProblemCd,
         'problem': _problemNameCtrl.text.trim(),
-        'classification': _selectedClassification,
+        'classification': _classificationCtrl.text.trim(),
         'rootcause': _selectedPenyebab,
         'countermeasure': _selectedPenanggulangan,
         'repaired_by': _selectedRepairedBy,
         'remark': remark.trim().isNotEmpty ? remark.trim() : '-',
         'sub_problem': _noteCtrl.text.trim().isNotEmpty ? _noteCtrl.text.trim() : '-',
-        'duration_ls': elapsedMinutes > 0 ? elapsedMinutes : 14,
-        'duration_mh': (elapsedMinutes > 0 ? elapsedMinutes : 14) * 2,
+        'duration_ls': durationLsVal,
+        'duration_mh': durationMhVal,
         'repaired_dt': DateTime.now().toIso8601String(),
         if (documentationAfterId != null) 'documentation_after_id': documentationAfterId,
       };
@@ -689,7 +699,7 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
                                const SizedBox(height: 16),
                                Row(
                                  children: [
-                                   Expanded(child: _buildReadOnlyField('Classification', _selectedClassification ?? _task.classification ?? '-')),
+                                   Expanded(child: _buildReadOnlyField('Classification', _classificationCtrl.text.isNotEmpty ? _classificationCtrl.text : (_task.classification ?? '-'))),
                                    const SizedBox(width: 20),
                                    Expanded(child: _buildReadOnlyField('Root Cause', _selectedPenyebab ?? _task.rootcause ?? '-')),
                                  ],
@@ -730,6 +740,14 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
                                Row(
                                  children: [
                                    Expanded(
+                                     child: _buildFormTextField(
+                                       label: 'Classification',
+                                       isRequired: true,
+                                       hint: 'Input classification',
+                                       controller: _classificationCtrl,
+                                       enabled: !isCompleted,
+                                     ),
+                                     /*
                                      child: _buildFormDropdown(
                                        label: 'Classification',
                                        isRequired: true,
@@ -738,6 +756,7 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
                                        items: _classificationOptions.map((e) => e['system_value'].toString()).toList(),
                                        onChanged: isCompleted ? null : (v) => setState(() => _selectedClassification = v),
                                      ),
+                                     */
                                    ),
                                    const SizedBox(width: 20),
                                    Expanded(
@@ -808,22 +827,20 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
                                     color: AppColors.textPrimary,
                                   ),
                                 ),
-                                if (_task.partOrders != null && _task.partOrders!.isNotEmpty)
+                                if (_task.partOrders != null && _task.partOrders!.isNotEmpty && !isCompleted)
                                   OutlinedButton.icon(
-                                    onPressed: isCompleted
-                                        ? null
-                                        : () async {
-                                            final res = await Navigator.pushNamed(
-                                              context,
-                                              AppRoutes.inventory,
-                                              arguments: {
-                                                'taskId': _task.id,
-                                              },
-                                            );
-                                            if (res == true) {
-                                              _refreshTask();
-                                            }
+                                    onPressed: () async {
+                                        final res = await Navigator.pushNamed(
+                                          context,
+                                          AppRoutes.inventory,
+                                          arguments: {
+                                            'taskId': _task.id,
                                           },
+                                        );
+                                        if (res == true) {
+                                          _refreshTask();
+                                        }
+                                      },
                                     icon: const Icon(Icons.add, color: Color(0xFF10B981), size: 14),
                                     label: const Text(
                                       'New Order Part',
@@ -884,46 +901,52 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
                             if (_changePartVal == 'Yes') ...[
                               const SizedBox(height: 12),
                               if (_task.partOrders == null || _task.partOrders!.isEmpty)
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: Center(
-                                    child: OutlinedButton.icon(
-                                      onPressed: () async {
-                                        final res = await Navigator.pushNamed(
-                                          context,
-                                          AppRoutes.inventory,
-                                          arguments: {
-                                            'taskId': _task.id,
-                                          },
-                                        );
-                                        if (res == true) {
-                                          _refreshTask();
-                                        }
-                                      },
-                                      icon: const Icon(Icons.add, color: Color(0xFF10B981), size: 18),
-                                      label: const Text(
-                                        'Add Part',
-                                        style: TextStyle(
-                                          color: Color(0xFF10B981),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
+                                if (isCompleted)
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 8),
+                                    child: Text('No part ordered', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                                  )
+                                else
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    child: Center(
+                                      child: OutlinedButton.icon(
+                                        onPressed: () async {
+                                          final res = await Navigator.pushNamed(
+                                            context,
+                                            AppRoutes.inventory,
+                                            arguments: {
+                                              'taskId': _task.id,
+                                            },
+                                          );
+                                          if (res == true) {
+                                            _refreshTask();
+                                          }
+                                        },
+                                        icon: const Icon(Icons.add, color: Color(0xFF10B981), size: 18),
+                                        label: const Text(
+                                          'Add Part',
+                                          style: TextStyle(
+                                            color: Color(0xFF10B981),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          side: const BorderSide(color: Color(0xFF10B981)),
+                                          shape: const StadiumBorder(),
+                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                          backgroundColor: const Color(0xFFECFDF5),
                                         ),
                                       ),
-                                      style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(color: Color(0xFF10B981)),
-                                        shape: const StadiumBorder(),
-                                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                        backgroundColor: const Color(0xFFECFDF5),
-                                      ),
                                     ),
-                                  ),
-                                )
+                                  )
                               else
                                 ..._task.partOrders!.map((order) {
                                   final isWaiting = order.status == 'Waiting Confirmation';
@@ -1133,7 +1156,7 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
                                               textBaseline: TextBaseline.alphabetic,
                                               children: [
                                                 Text(
-                                                  '${_task.durationLs ?? 14}:${(_task.id.hashCode % 60).toString().padLeft(2, '0')}',
+                                                  '${_task.durationLs ?? 14}',
                                                   style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                                 ),
                                                 const SizedBox(width: 4),
@@ -1158,7 +1181,7 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
                                               textBaseline: TextBaseline.alphabetic,
                                               children: [
                                                 Text(
-                                                  '${_task.durationMh ?? 28}:${((_task.id.hashCode * 3) % 60).toString().padLeft(2, '0')}',
+                                                  '${_task.durationMh ?? 28}',
                                                   style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                                 ),
                                                 const SizedBox(width: 4),
@@ -1396,7 +1419,7 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
                                         : Column(
                                             children: _historyTasks.map((t) {
                                               final isExpanded = _expandedHistoryIds.contains(t.id);
-                                              final durationLabel = '${t.durationLs ?? 14}:${(t.id.hashCode % 60).toString().padLeft(2, '0')} Minute Reparation';
+                                              final durationLabel = '${t.durationLs ?? 14} Minute Reparation';
                                               final dateStr = t.repairedDt != null
                                                   ? t.repairedDt!.split('T')[0]
                                                   : '4 Mar 2026';
@@ -1698,7 +1721,7 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
               const SizedBox(height: 16),
               _infoLabel('Model'),
               const SizedBox(height: 6),
-              _infoVal(_task.model ?? 'Transfer 1'),
+              _infoVal(_task.model ?? '-'),
             ],
           ),
         ),
