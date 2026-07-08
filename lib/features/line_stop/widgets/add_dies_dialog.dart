@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dropdown_search/dropdown_search.dart';
@@ -112,7 +114,9 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
             Center(
               child: InteractiveViewer(
                 maxScale: 4.0,
-                child: Image.network(_imageFile!.path),
+                child: kIsWeb
+                    ? Image.network(_imageFile!.path)
+                    : Image.file(File(_imageFile!.path)),
               ),
             ),
             Positioned(
@@ -463,10 +467,15 @@ class _AddDiesDialogState extends State<AddDiesDialog> {
                         child: Stack(
                           children: [
                             Positioned.fill(
-                              child: Image.network(
-                                _imageFile!.path,
-                                fit: BoxFit.cover,
-                              ),
+                              child: kIsWeb
+                                  ? Image.network(
+                                      _imageFile!.path,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.file(
+                                      File(_imageFile!.path),
+                                      fit: BoxFit.cover,
+                                    ),
                             ),
                             Positioned(
                               top: 8,

@@ -323,195 +323,207 @@ class _LineStopDetailScreenState extends State<LineStopDetailScreen> {
               child: Container(
                 width: 720,
                 padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: StatefulBuilder(
+                  builder: (context, setDialogState) {
+                    final isMobile = MediaQuery.of(context).size.width < 600;
+
+                    final cameraWidget = Column(
                       children: [
-                        const Text(
-                          'Documentation - After Reparation',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, size: 20),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Left column: Camera upload
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            children: [
-                              _afterPhoto != null
-                                  ? Container(
-                                      height: 140,
-                                      width: 240,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                                      ),
-                                      child: Stack(
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(8),
-                                            child: kIsWeb
-                                                ? Image.network(
-                                                    _afterPhoto!.path,
-                                                    height: 140,
-                                                    width: 240,
-                                                    fit: BoxFit.cover,
-                                                  )
-                                                : Image.file(
-                                                    File(_afterPhoto!.path),
-                                                    height: 140,
-                                                    width: 240,
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                          ),
-                                          Positioned(
-                                            top: 8,
-                                            right: 8,
-                                            child: InkWell(
-                                              onTap: () {
-                                                _showZoomedImage(_afterPhoto!.path);
-                                              },
-                                              child: Container(
-                                                padding: const EdgeInsets.all(4),
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.white,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: const Icon(Icons.crop_free_rounded, size: 16, color: Colors.grey),
-                                              ),
+                        _afterPhoto != null
+                            ? Container(
+                                height: 140,
+                                width: 240,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: kIsWeb
+                                          ? Image.network(
+                                              _afterPhoto!.path,
+                                              height: 140,
+                                              width: 240,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : Image.file(
+                                              File(_afterPhoto!.path),
+                                              height: 140,
+                                              width: 240,
+                                              fit: BoxFit.cover,
                                             ),
+                                    ),
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: InkWell(
+                                        onTap: () {
+                                          _showZoomedImage(_afterPhoto!.path);
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
                                           ),
-                                        ],
-                                      ),
-                                    )
-                                  : InkWell(
-                                      onTap: () async {
-                                        final picker = ImagePicker();
-                                        final photo = await picker.pickImage(source: ImageSource.camera);
-                                        if (photo != null) {
-                                          setDialogState(() {
-                                            _afterPhoto = photo;
-                                          });
-                                        }
-                                      },
-                                      child: Container(
-                                        height: 140,
-                                        width: 240,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF1F5F9),
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                                        ),
-                                        child: const Center(
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(Icons.camera_alt_outlined, size: 28, color: Colors.grey),
-                                              SizedBox(height: 6),
-                                              Text('Take Photo', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
-                                            ],
-                                          ),
+                                          child: const Icon(Icons.crop_free_rounded, size: 16, color: Colors.grey),
                                         ),
                                       ),
                                     ),
-                              const SizedBox(height: 12),
-                              if (_afterPhoto != null)
-                                OutlinedButton.icon(
-                                  onPressed: () async {
-                                    final picker = ImagePicker();
-                                    final photo = await picker.pickImage(source: ImageSource.camera);
-                                    if (photo != null) {
-                                      setDialogState(() {
-                                        _afterPhoto = photo;
-                                      });
-                                    }
-                                  },
-                                  icon: const Icon(Icons.reply_rounded, color: Color(0xFF10B981), size: 16),
-                                  label: const Text(
-                                    'Retake',
-                                    style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold),
+                                  ],
+                                ),
+                              )
+                            : InkWell(
+                                onTap: () async {
+                                  final picker = ImagePicker();
+                                  final photo = await picker.pickImage(source: ImageSource.camera);
+                                  if (photo != null) {
+                                    setDialogState(() {
+                                      _afterPhoto = photo;
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  height: 140,
+                                  width: 240,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
                                   ),
-                                  style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(color: Color(0xFF10B981)),
-                                    shape: const StadiumBorder(),
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  child: const Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.camera_alt_outlined, size: 28, color: Colors.grey),
+                                        SizedBox(height: 6),
+                                        Text('Take Photo', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                            ],
+                              ),
+                        const SizedBox(height: 12),
+                        if (_afterPhoto != null)
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final picker = ImagePicker();
+                              final photo = await picker.pickImage(source: ImageSource.camera);
+                              if (photo != null) {
+                                setDialogState(() {
+                                  _afterPhoto = photo;
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.reply_rounded, color: Color(0xFF10B981), size: 16),
+                            label: const Text(
+                              'Retake',
+                              style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFF10B981)),
+                              shape: const StadiumBorder(),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            ),
+                          ),
+                      ],
+                    );
+
+                    final remarkWidget = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Remark (Optional)',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: remarkCtrl,
+                          maxLines: 4,
+                          style: const TextStyle(fontSize: 13),
+                          decoration: InputDecoration(
+                            hintText: 'Input remark here...',
+                            hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                            contentPadding: const EdgeInsets.all(12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: AppColors.divider),
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 24),
-                        // Right column: Remark
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Remark (Optional)',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                              ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: remarkCtrl,
-                                maxLines: 4,
-                                style: const TextStyle(fontSize: 13),
-                                decoration: InputDecoration(
-                                  hintText: 'Input remark here...',
-                                  hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                                  contentPadding: const EdgeInsets.all(12),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: const BorderSide(color: AppColors.divider),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  '-550 Karakter',
-                                  style: TextStyle(fontSize: 10, color: AppColors.textMuted),
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 4),
+                        const Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            '-550 Karakter',
+                            style: TextStyle(fontSize: 10, color: AppColors.textMuted),
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 24),
-                    // Action button
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _saveAndCompleteReparation(remarkCtrl.text);
-                        },
-                        icon: const Icon(Icons.save_outlined, size: 16),
-                        label: const Text('Save & Completed Repairation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: const StadiumBorder(),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                        ),
+                    );
+
+                    return SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Documentation - After Reparation',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close, size: 20),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          isMobile
+                              ? Column(
+                                  children: [
+                                    cameraWidget,
+                                    const SizedBox(height: 24),
+                                    remarkWidget,
+                                  ],
+                                )
+                              : Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: cameraWidget),
+                                    const SizedBox(width: 24),
+                                    Expanded(child: remarkWidget),
+                                  ],
+                                ),
+                          const SizedBox(height: 24),
+                          // Action button
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _saveAndCompleteReparation(remarkCtrl.text);
+                              },
+                              icon: const Icon(Icons.save_outlined, size: 16),
+                              label: const Text('Save & Completed Repairation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: const StadiumBorder(),
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             );
