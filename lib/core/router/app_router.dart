@@ -9,6 +9,8 @@ import '../../features/line_stop/screens/line_stop_screen.dart';
 import '../../features/report_dashboard/screens/line_stop_monitoring_dashboard_screen.dart';
 import '../../features/inventory/screens/inventory_screen.dart';
 import '../../features/dashboard/data/line_stop_service.dart';
+import '../../features/maintenance/screens/maintenance_screen.dart';
+import '../../features/landing/screens/startup_guard_screen.dart';
 
 /// Nama-nama route yang digunakan di seluruh aplikasi.
 class AppRoutes {
@@ -22,6 +24,7 @@ class AppRoutes {
   static const String maintenanceDashboard = '/maintenance-dashboard';
   static const String reportDashboard = '/report-dashboard'; // Maps to Page Dashboard Report
   static const String inventory = '/inventory'; // Maps to Homepage Inventory Management
+  static const String maintenance = '/maintenance';
 }
 
 /// Router aplikasi: mengelola navigasi dan auth guard.
@@ -32,7 +35,7 @@ class AppRouter {
 
   /// Route map yang didaftarkan ke [MaterialApp].
   static Map<String, WidgetBuilder> get routes => {
-        AppRoutes.landing: (_) => const LoginScreen(),
+        AppRoutes.landing: (_) => const StartupGuardScreen(),
         AppRoutes.login:   (_) => const LoginScreen(),
         AppRoutes.selectMenu: (context) {
           final user = SessionStore.instance.currentUser;
@@ -68,15 +71,12 @@ class AppRouter {
             editOrder: args?['editOrder'] as PartOrder?,
           );
         },
+        AppRoutes.maintenance: (_) => const MaintenanceScreen(),
       };
 
   /// Route awal saat app dibuka.
-  /// Jika sudah login → langsung ke select menu, jika belum → login.
-  static String get initialRoute {
-    return SessionStore.instance.isLoggedIn
-        ? AppRoutes.selectMenu
-        : AppRoutes.landing;
-  }
+  /// Selalu masuk ke StartupGuardScreen untuk verifikasi status server & login.
+  static String get initialRoute => AppRoutes.landing;
 
   // ── Navigation helpers ────────────────────────────────────────────
 

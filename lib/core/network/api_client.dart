@@ -168,6 +168,13 @@ class ApiClient {
       );
     }
 
+    if (statusCode == 503) {
+      AppRouter.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        AppRoutes.maintenance,
+        (_) => false,
+      );
+    }
+
     throw ApiException(statusCode: statusCode, message: message);
   }
 }
