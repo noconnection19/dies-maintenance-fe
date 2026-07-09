@@ -406,7 +406,7 @@ class _MaintenanceDashboardScreenState extends State<MaintenanceDashboardScreen>
               ),
               const SizedBox(height: 8),
               _buildLineDetailCard(
-                title: "PPM Transver",
+                title: "PPM Transfer",
                 value: "${(lineDetails['transver']['ppm'] as num).toInt()}  |  ${(lineDetails['transver']['hours'] as num).toInt()} Jam",
                 indicatorText: "▲ 2% vs last month",
                 borderColor: Colors.amber,

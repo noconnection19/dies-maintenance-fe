@@ -905,7 +905,7 @@ class _LineStopMonitoringDashboardScreenState extends State<LineStopMonitoringDa
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: const Text(
-              'PPM Transver',
+              'PPM Transfer',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
